@@ -13,7 +13,6 @@ export default function ProductDetail() {
     const [activeImage, setActiveImage] = useState(0);
     const [quantity, setQuantity] = useState(1);
     const [isFavorite, setIsFavorite] = useState(false);
-    const [addedToCart, setAddedToCart] = useState(false);
 
     // Base path for this merchant's storefront
     const basePath = `/s/${merchantSlug}`;
@@ -40,16 +39,6 @@ export default function ProductDetail() {
         };
 
         addToCart(cartItem, quantity);
-
-        // Show success feedback
-        setAddedToCart(true);
-        setTimeout(() => setAddedToCart(false), 3000);
-
-        // Ask user if they want to view cart or continue shopping
-        const viewCart = window.confirm(`✓ Added ${quantity}x ${product.title} to cart!\n\nView cart now?`);
-        if (viewCart) {
-            navigate(`${basePath}/cart`);
-        }
     };
 
     const handleShare = async () => {
