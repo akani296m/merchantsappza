@@ -1,92 +1,242 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useProducts } from '../context/productcontext';
-import { useNavigate } from 'react-router-dom'; 
-import { Share2, Eye, Save, Plus, X, ChevronDown } from 'lucide-react'
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Share2, Eye, Save, Plus, X, ChevronDown } from 'lucide-react';
+import { uploadImage, deleteImage } from '../lib/uploadImage';
 
 export default function ProductCreator() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editProduct = location.state?.editProduct;
+
   const [productTitle, setProductTitle] = useState('');
-const [priceInput, setPriceInput] = useState(''); // UI string
-const [price, setPrice] = useState(0);            // number (logic)
+  const [priceInput, setPriceInput] = useState(''); // UI string
+  const [price, setPrice] = useState(0);            // number (logic)
   const [description, setDescription] = useState('');
   const [images, setImages] = useState([]);
   const [category, setCategory] = useState('');
   const [inventory, setInventory] = useState('');
-  const [tags, setTags] = useState({ shoes: false, accessories: false, clothing: false });
+  const [tags, setTags] = useState([]);
+  const [tagInput, setTagInput] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
-  
-  const { addProduct } = useProducts();
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  const { addProduct, editProduct: updateProduct } = useProducts();
   const fileInputRef = useRef(null);
 
-  const categories = ['Electronics', 'Fashion', 'Home & Garden', 'Sports', 'Books', 'Toys'];
+  const categories = ['Electronics', 'Fashion', 'Home & Garden', 'Beauty', 'Sports', 'Books', 'Toys'];
 
-const formatPrice = (value) => {
-  let clean = value.replace(/[^\d.]/g, '');
-
-  const parts = clean.split('.');
-  if (parts.length > 2) {
-    clean = parts[0] + '.' + parts.slice(1).join('');
-  }
-
-  const [integer, decimal] = clean.split('.');
-  const formattedInt = integer
-    ? parseInt(integer, 10).toLocaleString('en-ZA')
-    : '';
-
-  return decimal !== undefined
-    ? `${formattedInt}.${decimal.slice(0, 2)}`
-    : formattedInt;
-};
-
-const handlePriceChange = (e) => {
-  const input = e.target.value;
-  const formatted = formatPrice(input);
-
-  const numeric = parseFloat(formatted.replace(/,/g, '')) || 0;
-
-  setPriceInput(formatted);
-  setPrice(numeric);
-};
-
-
-  const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
-    const newImages = files.map(file => ({
-      id: Math.random().toString(36).substr(2, 9),
-      url: URL.createObjectURL(file),
-      file
-    }));
-    setImages(prev => [...prev, ...newImages]);
+  // Helper function to recursively extract the actual URL from nested objects
+  const extractImageUrl = (item) => {
+    // If it's already a string URL, return it
+    if (typeof item === 'string') {
+      return item;
+    }
+    // If it's an object with a url property, recurse into it
+    if (item && typeof item === 'object' && item.url) {
+      return extractImageUrl(item.url);
+    }
+    // Fallback
+    return null;
   };
 
-  const removeImage = (id) => {
+  // Populate form when editing an existing product
+  useEffect(() => {
+    if (editProduct) {
+      setIsEditMode(true);
+      setProductTitle(editProduct.title || '');
+
+      // Normalize price to number
+      const numericPrice = Number(editProduct.price) || 0;
+      setPrice(numericPrice);
+      setPriceInput(numericPrice > 0 ? numericPrice.toLocaleString('en-ZA') : '');
+
+      setDescription(editProduct.description || '');
+      setCategory(editProduct.category || '');
+
+      // Normalize inventory to string (preserve 0)
+      setInventory(editProduct.inventory !== null && editProduct.inventory !== undefined
+        ? String(editProduct.inventory)
+        : '');
+
+      // Normalize tags to array
+      setTags(Array.isArray(editProduct.tags) ? editProduct.tags : []);
+
+      // Normalize images - extract actual URLs from potentially nested objects
+      const normalizedImages = Array.isArray(editProduct.images)
+        ? editProduct.images.map((item, i) => {
+          const actualUrl = extractImageUrl(item);
+          return actualUrl ? {
+            id: `server-img-${i}`,
+            url: actualUrl,
+            uploading: false
+          } : null;
+        }).filter(Boolean) // Remove any null entries
+        : [];
+      setImages(normalizedImages);
+    }
+  }, [editProduct]);
+
+  const formatPrice = (value) => {
+    let clean = value.replace(/[^\d.]/g, '');
+
+    const parts = clean.split('.');
+    if (parts.length > 2) {
+      clean = parts[0] + '.' + parts.slice(1).join('');
+    }
+
+    const [integer, decimal] = clean.split('.');
+    const formattedInt = integer
+      ? parseInt(integer, 10).toLocaleString('en-ZA')
+      : '';
+
+    return decimal !== undefined
+      ? `${formattedInt}.${decimal.slice(0, 2)}`
+      : formattedInt;
+  };
+
+  const handlePriceChange = (e) => {
+    const input = e.target.value;
+    const formatted = formatPrice(input);
+
+    const numeric = parseFloat(formatted.replace(/,/g, '')) || 0;
+
+    setPriceInput(formatted);
+    setPrice(numeric);
+  };
+
+
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files);
+
+    // Create placeholder entries with loading state
+    const placeholders = files.map(file => ({
+      id: Math.random().toString(36).substr(2, 9),
+      url: URL.createObjectURL(file), // Temporary preview
+      uploading: true,
+      file
+    }));
+
+    setImages(prev => [...prev, ...placeholders]);
+
+    // Upload each file to Supabase
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const placeholderId = placeholders[i].id;
+
+      const result = await uploadImage(file);
+
+      if (result.success) {
+        // Replace placeholder with actual uploaded image
+        setImages(prev => prev.map(img =>
+          img.id === placeholderId
+            ? { id: placeholderId, url: result.url, uploading: false }
+            : img
+        ));
+      } else {
+        // Remove failed upload
+        console.error('Failed to upload image:', result.error);
+        setImages(prev => prev.filter(img => img.id !== placeholderId));
+        alert(`Failed to upload ${file.name}: ${result.error}`);
+      }
+    }
+  };
+
+  const removeImage = async (id) => {
+    const imageToRemove = images.find(img => img.id === id);
+
+    // Only delete from storage if it's an uploaded image (not a placeholder)
+    if (imageToRemove && !imageToRemove.uploading && imageToRemove.url.includes('supabase')) {
+      await deleteImage(imageToRemove.url);
+    }
+
     setImages(prev => prev.filter(img => img.id !== id));
   };
 
+  const handleTagKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const newTag = tagInput.trim().toLowerCase();
+      if (newTag && !tags.includes(newTag)) {
+        setTags(prev => [...prev, newTag]);
+      }
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tagToRemove) => {
+    setTags(prev => prev.filter(tag => tag !== tagToRemove));
+  };
+
   // --- FIXED: Combined your Save logic into one function ---
-  const handleSave = () => {
+  const handleSave = async () => {
     setSaveStatus('Saving...');
 
-const newProduct = {
-  title: productTitle,
-  price, // 👈 NUMBER (1299.99)
-  description,
-  category,
-  inventory,
-  images,
-  tags,
-  createdAt: new Date().toISOString()
-};
+    // Check if any images are still uploading
+    const uploadingImages = images.filter(img => img.uploading);
+    if (uploadingImages.length > 0) {
+      alert('Please wait for all images to finish uploading');
+      setSaveStatus('');
+      return;
+    }
 
-    // Add to context
-    addProduct(newProduct);
+    try {
+      // Upload any images that still have file objects (shouldn't happen normally, but safety check)
+      const processedImageUrls = [];
 
-    // UI Feedback & Navigation
-    setTimeout(() => {
-      setSaveStatus('Saved!');
-      setTimeout(() => navigate('/products'), 1000); 
-    }, 1000);
+      for (const img of images) {
+        // If image has a file object and isn't a Supabase URL, upload it
+        if (img.file && !img.url.includes('supabase')) {
+          setSaveStatus('Uploading images...');
+          const result = await uploadImage(img.file);
+
+          if (result.success) {
+            processedImageUrls.push(result.url);
+          } else {
+            setSaveStatus('Error!');
+            alert(`Failed to upload image: ${result.error}`);
+            return;
+          }
+        } else {
+          // Image is already uploaded - just save the URL string
+          processedImageUrls.push(img.url);
+        }
+      }
+
+      setSaveStatus('Saving...');
+
+      const productData = {
+        title: productTitle,
+        price: (price === '' || price === null) ? null : Number(price),
+        description,
+        category,
+        inventory: (inventory === '' || inventory === null) ? null : Number(inventory),
+        images: processedImageUrls, // Store as array of URL strings, not objects
+        tags,
+      };
+
+      let result;
+      if (isEditMode) {
+        result = await updateProduct(editProduct.id, productData);
+      } else {
+        result = await addProduct(productData);
+      }
+
+      if (result.success) {
+        setSaveStatus('Saved!');
+        // Navigate back to product listing after save
+        setTimeout(() => {
+          navigate('/products');
+        }, 500);
+      } else {
+        setSaveStatus('Error!');
+        console.error('Save failed:', result.error);
+      }
+    } catch (err) {
+      setSaveStatus('Error!');
+      console.error('Save error:', err);
+    }
   };
   // ---------------------------------------------------------
 
@@ -111,17 +261,17 @@ const newProduct = {
   const handlePreview = () => {
     const productData = {
       title: productTitle || 'Untitled Product',
-      price: parseFloat(price.replace(/[^\d]/g, '')) || 0, 
-      rating: 5, 
+      price,
+      rating: 5,
       description: description,
-      images: images.length > 0 ? images.map(img => img.url) : ['No Image'], 
+      images: images.length > 0 ? images.map(img => img.url) : ['No Image'],
       tabs: [
         { id: '1', title: 'Description', content: description || 'No description.' },
         { id: '2', title: 'Product Details', content: `Category: ${category}\nInventory: ${inventory}` },
         { id: '3', title: 'Shipping', content: 'Standard shipping rates apply.' },
       ]
     };
-    
+
     navigate('/store/product-preview', { state: { product: productData } });
   };
 
@@ -132,7 +282,7 @@ const newProduct = {
         <div className="border-b border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold text-gray-900">
-              Product Creator Page Wireframe (MVP)
+              {isEditMode ? 'Edit Product' : 'Create New Product'}
             </h1>
             <div className="flex gap-2">
               <button
@@ -167,15 +317,15 @@ const newProduct = {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Product Title *
             </label>
-        <input
-             type="text"
-             value={productTitle}
-             onChange={(e) => setProductTitle(e.target.value)}
-             maxLength={100}
-             placeholder="Enter product title"
-             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-             required
-           />
+            <input
+              type="text"
+              value={productTitle}
+              onChange={(e) => setProductTitle(e.target.value)}
+              maxLength={100}
+              placeholder="Enter product title"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              required
+            />
 
           </div>
 
@@ -186,11 +336,14 @@ const newProduct = {
             </label>
             <div className="relative">
               <span className="absolute left-4 top-2.5 text-gray-600 font-medium">R</span>
-<input
-  type="text"
-  value={priceInput}
-  onChange={handlePriceChange}
-/>
+              <input
+                type="text"
+                value={priceInput}
+                onChange={handlePriceChange}
+                placeholder="0.00"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg
+             focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
 
             </div>
           </div>
@@ -218,9 +371,15 @@ const newProduct = {
               {images.map(img => (
                 <div key={img.id} className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200">
                   <img src={img.url} alt="" className="w-full h-full object-cover" />
+                  {img.uploading && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                      <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  )}
                   <button
                     onClick={() => removeImage(img.id)}
-                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                    disabled={img.uploading}
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <X size={14} />
                   </button>
@@ -285,17 +444,29 @@ const newProduct = {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Product Tags
               </label>
-              <div className="space-y-2">
-                {Object.entries(tags).map(([key, checked]) => (
-                  <label key={key} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => setTags(prev => ({ ...prev, [key]: e.target.checked }))}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700 uppercase">{key}</span>
-                  </label>
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                placeholder="Type tag and press Enter"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none mb-2"
+              />
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(tag)}
+                      className="ml-1 hover:text-blue-600 focus:outline-none"
+                    >
+                      <X size={14} />
+                    </button>
+                  </span>
                 ))}
               </div>
             </div>
@@ -329,8 +500,8 @@ const newProduct = {
                 <div><strong>Stock:</strong> {inventory || '0'}</div>
               </div>
               <div className="flex gap-2 flex-wrap">
-                {Object.entries(tags).filter(([_, checked]) => checked).map(([tag]) => (
-                  <span key={tag} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm uppercase">
+                {tags.map((tag) => (
+                  <span key={tag} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
                     {tag}
                   </span>
                 ))}
