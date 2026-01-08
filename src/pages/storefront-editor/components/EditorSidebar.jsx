@@ -8,7 +8,8 @@ import {
     RotateCcw,
     Loader2,
     CheckCircle,
-    AlertCircle
+    AlertCircle,
+    ExternalLink
 } from 'lucide-react';
 import AccordionSection from './AccordionSection';
 import ImageUploader from './ImageUploader';
@@ -25,15 +26,24 @@ export default function EditorSidebar({
     resetSettings,
     saving,
     hasChanges,
-    error
+    error,
+    merchantSlug
 }) {
     const [saveSuccess, setSaveSuccess] = React.useState(false);
+    const [saveError, setSaveError] = React.useState(null);
 
     const handleSave = async () => {
+        setSaveError(null);
+        console.log('Saving settings...', settings);
+
         const result = await saveSettings();
+        console.log('Save result:', result);
+
         if (result.success) {
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 3000);
+        } else {
+            setSaveError(result.error || 'Failed to save changes');
         }
     };
 
@@ -43,6 +53,17 @@ export default function EditorSidebar({
             <div className="px-4 py-4 border-b border-gray-200 bg-white">
                 <h2 className="text-lg font-bold text-gray-900">Storefront Editor</h2>
                 <p className="text-sm text-gray-500 mt-1">Customize your store's appearance</p>
+                {merchantSlug && (
+                    <a
+                        href={`/s/${merchantSlug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600"
+                    >
+                        <ExternalLink size={12} />
+                        Preview: /s/{merchantSlug}
+                    </a>
+                )}
             </div>
 
             {/* Scrollable Content */}
@@ -216,10 +237,10 @@ export default function EditorSidebar({
             {/* Fixed Footer with Actions */}
             <div className="p-4 bg-white border-t border-gray-200 space-y-3">
                 {/* Status Messages */}
-                {error && (
+                {(error || saveError) && (
                     <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">
                         <AlertCircle size={16} />
-                        <span>{error}</span>
+                        <span>{error || saveError}</span>
                     </div>
                 )}
 

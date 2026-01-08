@@ -44,6 +44,7 @@ export function useStorefrontSettings(merchantId) {
     useEffect(() => {
         async function fetchSettings() {
             if (!merchantId) {
+                console.log('[useStorefrontSettings] No merchantId provided, skipping fetch');
                 setLoading(false);
                 return;
             }
@@ -51,6 +52,7 @@ export function useStorefrontSettings(merchantId) {
             try {
                 setLoading(true);
                 setError(null);
+                console.log('[useStorefrontSettings] Fetching settings for merchant:', merchantId);
 
                 const { data, error: fetchError } = await supabase
                     .from('merchants')
@@ -69,7 +71,12 @@ export function useStorefrontSettings(merchantId) {
                     .eq('id', merchantId)
                     .single();
 
-                if (fetchError) throw fetchError;
+                if (fetchError) {
+                    console.error('[useStorefrontSettings] Fetch error:', fetchError);
+                    throw fetchError;
+                }
+
+                console.log('[useStorefrontSettings] Fetched data:', data);
 
                 // Merge fetched data with defaults (in case some fields are null)
                 const mergedSettings = {
@@ -81,10 +88,11 @@ export function useStorefrontSettings(merchantId) {
                         : (data?.trust_badges || DEFAULT_SETTINGS.trust_badges)
                 };
 
+                console.log('[useStorefrontSettings] Merged settings:', mergedSettings);
                 setSettings(mergedSettings);
                 setOriginalSettings(mergedSettings);
             } catch (err) {
-                console.error('Error fetching storefront settings:', err);
+                console.error('[useStorefrontSettings] Error fetching storefront settings:', err);
                 setError(err.message);
             } finally {
                 setLoading(false);
@@ -116,35 +124,57 @@ export function useStorefrontSettings(merchantId) {
 
     // Save settings to Supabase
     const saveSettings = useCallback(async () => {
-        if (!merchantId) return { success: false, error: 'No merchant ID' };
+        if (!merchantId) {
+            console.error('[useStorefrontSettings] Cannot save - no merchant ID');
+            return { success: false, error: 'No merchant ID' };
+        }
 
         try {
             setSaving(true);
             setError(null);
 
-            const { error: updateError } = await supabase
-                .from('merchants')
-                .update({
-                    hero_image_url: settings.hero_image_url,
-                    hero_title: settings.hero_title,
-                    hero_subtitle: settings.hero_subtitle,
-                    logo_url: settings.logo_url,
-                    primary_color: settings.primary_color,
-                    accent_color: settings.accent_color,
-                    trust_badges: settings.trust_badges,
-                    email_capture_title: settings.email_capture_title,
-                    email_capture_subtitle: settings.email_capture_subtitle,
-                    email_capture_button_text: settings.email_capture_button_text
-                })
-                .eq('id', merchantId);
+            const updatePayload = {
+                hero_image_url: settings.hero_image_url,
+                hero_title: settings.hero_title,
+                hero_subtitle: settings.hero_subtitle,
+                logo_url: settings.logo_url,
+                primary_color: settings.primary_color,
+                accent_color: settings.accent_color,
+                trust_badges: settings.trust_badges,
+                email_capture_title: settings.email_capture_title,
+                email_capture_subtitle: settings.email_capture_subtitle,
+                email_capture_button_text: settings.email_capture_button_text
+            };
 
-            if (updateError) throw updateError;
+            console.log('[useStorefrontSettings] Saving settings for merchant:', merchantId);
+            console.log('[useStorefrontSettings] Update payload:', updatePayload);
+
+            const { data, error: updateError } = await supabase
+                .from('merchants')
+                .update(updatePayload)
+                .eq('id', merchantId)
+                .select(); // Add .select() to return the updated row
+
+            console.log('[useStorefrontSettings] Update result - data:', data, 'error:', updateError);
+
+            if (updateError) {
+                console.error('[useStorefrontSettings] Supabase update error:', updateError);
+                throw updateError;
+            }
+
+            // Check if any rows were actually updated
+            if (!data || data.length === 0) {
+                console.error('[useStorefrontSettings] No rows updated! Check RLS policies or merchant ID:', merchantId);
+                throw new Error('No rows updated - check that the merchant exists and RLS allows updates');
+            }
+
+            console.log('[useStorefrontSettings] Successfully updated merchant:', data[0]);
 
             setOriginalSettings(settings);
             setHasChanges(false);
             return { success: true };
         } catch (err) {
-            console.error('Error saving storefront settings:', err);
+            console.error('[useStorefrontSettings] Error saving storefront settings:', err);
             setError(err.message);
             return { success: false, error: err.message };
         } finally {
