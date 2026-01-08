@@ -88,6 +88,7 @@ export default function Sidebar() {
           {/* Sales Channels Section */}
           <SectionLabel>Sales channels</SectionLabel>
           <NavItem name="Online Store" icon={Store} path="/store" onClick={() => setIsOpen(false)} />
+          <NavItem name="Store Editor" icon={Image} path="/store/editor" onClick={() => setIsOpen(false)} />
 
           {/* Apps Section */}
           <SectionLabel>Apps</SectionLabel>

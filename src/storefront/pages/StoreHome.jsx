@@ -1,8 +1,27 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowRight, Truck, ShieldCheck, RefreshCw, Loader2, Package } from 'lucide-react';
+import { ArrowRight, Truck, ShieldCheck, RefreshCw, Loader2, Package, Clock, Heart, Star, Award, Headphones } from 'lucide-react';
 import { useMerchant } from '../context/MerchantContext';
 import { useMerchantProducts } from '../hooks/useMerchantProducts';
+
+// Icon mapping for dynamic trust badges
+const ICON_MAP = {
+    Truck: Truck,
+    RefreshCw: RefreshCw,
+    ShieldCheck: ShieldCheck,
+    Clock: Clock,
+    Heart: Heart,
+    Star: Star,
+    Award: Award,
+    Headphones: Headphones
+};
+
+// Default trust badges if none are set
+const DEFAULT_TRUST_BADGES = [
+    { icon: 'Truck', title: 'Free Shipping', subtitle: 'On all orders over R 1,500' },
+    { icon: 'RefreshCw', title: 'Free Returns', subtitle: '30 days money-back guarantee' },
+    { icon: 'ShieldCheck', title: 'Secure Payment', subtitle: 'Protected by 256-bit SSL encryption' }
+];
 
 export default function StoreHome() {
     const { merchantSlug } = useParams();
@@ -24,17 +43,36 @@ export default function StoreHome() {
     const activeProducts = products.filter(p => p.is_active);
     const trendingProducts = activeProducts.slice(0, 4);
 
-    // Get merchant branding
+    // Get merchant branding with fallbacks
     const storeName = merchant?.store_name || merchant?.business_name || 'Store';
     const heroImage = merchant?.hero_image_url || 'https://images.unsplash.com/photo-1483985988355-763728e1935b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80';
     const heroTitle = merchant?.hero_title || 'Redefine Your Everyday Style.';
     const heroSubtitle = merchant?.hero_subtitle || 'Premium products designed for comfort and quality. Discover the new collection before it sells out.';
 
+    // Get customizable colors
+    const primaryColor = merchant?.primary_color || '#000000';
+    const accentColor = merchant?.accent_color || '#3b82f6';
+
+    // Get trust badges with fallback
+    const trustBadges = merchant?.trust_badges && Array.isArray(merchant.trust_badges)
+        ? merchant.trust_badges
+        : (typeof merchant?.trust_badges === 'string'
+            ? JSON.parse(merchant.trust_badges)
+            : DEFAULT_TRUST_BADGES);
+
+    // Get email capture settings with fallbacks
+    const emailCaptureTitle = merchant?.email_capture_title || 'Join the Movement';
+    const emailCaptureSubtitle = merchant?.email_capture_subtitle || 'Sign up for our newsletter and get 15% off your first order, plus early access to new drops.';
+    const emailCaptureButtonText = merchant?.email_capture_button_text || 'Sign Up';
+
     return (
         <div className="bg-white">
 
             {/* 1. HERO SECTION */}
-            <section className="relative h-[80vh] bg-gray-900 text-white overflow-hidden">
+            <section
+                className="relative h-[80vh] text-white overflow-hidden"
+                style={{ backgroundColor: primaryColor }}
+            >
                 {/* Background Image Overlay */}
                 <div className="absolute inset-0">
                     <img
@@ -57,7 +95,8 @@ export default function StoreHome() {
                     </p>
                     <Link
                         to={`${basePath}/products`}
-                        className="bg-white text-black px-8 py-4 font-bold uppercase tracking-wider hover:bg-gray-200 transition flex items-center gap-3"
+                        className="px-8 py-4 font-bold uppercase tracking-wider hover:opacity-90 transition flex items-center gap-3"
+                        style={{ backgroundColor: 'white', color: primaryColor }}
                     >
                         Shop Now <ArrowRight size={20} />
                     </Link>
@@ -118,7 +157,10 @@ export default function StoreHome() {
                                             </div>
                                         )}
                                         {/* Quick Add Button (appears on hover) */}
-                                        <button className="absolute bottom-4 left-4 right-4 bg-white text-black py-3 font-medium text-sm opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 shadow-lg">
+                                        <button
+                                            className="absolute bottom-4 left-4 right-4 py-3 font-medium text-sm opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 shadow-lg"
+                                            style={{ backgroundColor: 'white', color: primaryColor }}
+                                        >
                                             View Product
                                         </button>
                                     </div>
@@ -140,11 +182,14 @@ export default function StoreHome() {
                 )}
             </section>
 
-            {/* 3. PROMO BANNER */}
-            <section className="bg-black text-white py-24 px-6 text-center">
-                <h2 className="text-3xl font-bold mb-6">Join the Movement</h2>
+            {/* 3. PROMO BANNER / EMAIL CAPTURE */}
+            <section
+                className="py-24 px-6 text-center text-white"
+                style={{ backgroundColor: primaryColor }}
+            >
+                <h2 className="text-3xl font-bold mb-6">{emailCaptureTitle}</h2>
                 <p className="text-gray-400 max-w-xl mx-auto mb-8">
-                    Sign up for our newsletter and get 15% off your first order, plus early access to new drops.
+                    {emailCaptureSubtitle}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
                     <input
@@ -152,8 +197,11 @@ export default function StoreHome() {
                         placeholder="Enter your email"
                         className="px-4 py-3 bg-gray-800 border border-gray-700 text-white rounded focus:outline-none focus:border-white w-full"
                     />
-                    <button className="bg-white text-black px-6 py-3 font-bold rounded hover:bg-gray-200 transition whitespace-nowrap">
-                        Sign Up
+                    <button
+                        className="px-6 py-3 font-bold rounded hover:opacity-90 transition whitespace-nowrap"
+                        style={{ backgroundColor: 'white', color: primaryColor }}
+                    >
+                        {emailCaptureButtonText}
                     </button>
                 </div>
             </section>
@@ -161,27 +209,21 @@ export default function StoreHome() {
             {/* 4. TRUST BADGES */}
             <section className="py-16 border-b border-gray-100">
                 <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                    <div className="flex flex-col items-center">
-                        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-700">
-                            <Truck size={24} />
-                        </div>
-                        <h4 className="font-bold mb-2">Free Shipping</h4>
-                        <p className="text-sm text-gray-500">On all orders over R 1,500</p>
-                    </div>
-                    <div className="flex flex-col items-center">
-                        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-700">
-                            <RefreshCw size={24} />
-                        </div>
-                        <h4 className="font-bold mb-2">Free Returns</h4>
-                        <p className="text-sm text-gray-500">30 days money-back guarantee</p>
-                    </div>
-                    <div className="flex flex-col items-center">
-                        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-700">
-                            <ShieldCheck size={24} />
-                        </div>
-                        <h4 className="font-bold mb-2">Secure Payment</h4>
-                        <p className="text-sm text-gray-500">Protected by 256-bit SSL encryption</p>
-                    </div>
+                    {trustBadges.map((badge, index) => {
+                        const IconComponent = ICON_MAP[badge.icon] || ShieldCheck;
+                        return (
+                            <div key={index} className="flex flex-col items-center">
+                                <div
+                                    className="w-12 h-12 rounded-full flex items-center justify-center mb-4"
+                                    style={{ backgroundColor: `${accentColor}15` }}
+                                >
+                                    <IconComponent size={24} style={{ color: accentColor }} />
+                                </div>
+                                <h4 className="font-bold mb-2">{badge.title}</h4>
+                                <p className="text-sm text-gray-500">{badge.subtitle}</p>
+                            </div>
+                        );
+                    })}
                 </div>
             </section>
 
