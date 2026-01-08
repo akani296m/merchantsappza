@@ -2,20 +2,36 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, ShoppingBag, Tag, User, Target, Badge, Image, Globe,
-  Building, BarChart3, Settings, ChevronRight, Store, Plus, PlusCircle, Menu, X
+  Building, BarChart3, Settings, ChevronRight, Store, Plus, PlusCircle, Menu, X, LogOut, Loader2
 } from 'lucide-react';
+import { useAuth } from '../context/authContext';
 
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const { user, signOut } = useAuth();
+
+  // Handle logout
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    await signOut();
+    navigate('/login');
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (!user?.email) return 'A';
+    return user.email.charAt(0).toUpperCase();
+  };
 
   // Define your main navigation items
   const navItems = [
     { name: 'Home', icon: Home, path: '/' },
     { name: 'Orders', icon: ShoppingBag, path: '/orders' },
     { name: 'Products', icon: Tag, path: '/products' },
-    // UPDATE THIS LINE:
     { name: 'Add Product', icon: PlusCircle, path: '/products/create' },
     { name: 'Customers', icon: User, path: '/customers' },
     { name: 'Analytics', icon: BarChart3, path: '/analytics' },
@@ -96,9 +112,42 @@ export default function Sidebar() {
 
         </nav>
 
-        {/* Bottom Settings Button */}
-        <div className="mt-auto pt-4">
+        {/* Bottom Section: Settings & User Profile */}
+        <div className="mt-auto pt-4 space-y-3 border-t border-[#E1E1E1]">
+          {/* Settings */}
           <NavItem name="Settings" icon={Settings} path="/settings" onClick={() => setIsOpen(false)} />
+
+          {/* User Profile & Logout */}
+          <div className="bg-white rounded-xl p-3 shadow-sm border border-[#E1E1E1]">
+            <div className="flex items-center gap-3">
+              {/* Avatar */}
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold text-sm shadow-md">
+                {getUserInitials()}
+              </div>
+
+              {/* User Info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-[#303030] truncate">
+                  {user?.email || 'Admin'}
+                </p>
+                <p className="text-xs text-[#6D6D6D]">Administrator</p>
+              </div>
+            </div>
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="w-full mt-3 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+            >
+              {loggingOut ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <LogOut size={16} />
+              )}
+              <span>{loggingOut ? 'Logging out...' : 'Sign Out'}</span>
+            </button>
+          </div>
         </div>
       </aside>
     </>

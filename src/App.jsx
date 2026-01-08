@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 
 // Admin Layouts & Components
 import AdminLayout from './components/adminlayout';
+import ProtectedRoute from './components/protectedRoute';
 
 // Admin Pages
 import HomePage from './pages/home';
@@ -12,6 +13,7 @@ import ProductCreator from './pages/products';
 import ProductsPage from './pages/productlisting';
 import CustomersPage from './pages/customers';
 import Onboarding from './pages/onboarding';
+import Login from './pages/login';
 
 // Storefront Editor
 import { StorefrontEditor } from './pages/storefront-editor';
@@ -32,10 +34,19 @@ export default function App() {
     <Routes>
 
       {/* =========================================== */}
-      {/* GROUP 1: ADMIN DASHBOARD ROUTES            */}
-      {/* Unchanged - still at /admin/* or root      */}
+      {/* PUBLIC AUTH ROUTES                         */}
       {/* =========================================== */}
-      <Route element={<AdminLayout />}>
+      <Route path="/login" element={<Login />} />
+
+      {/* =========================================== */}
+      {/* GROUP 1: ADMIN DASHBOARD ROUTES (PROTECTED)*/}
+      {/* Requires authentication                    */}
+      {/* =========================================== */}
+      <Route element={
+        <ProtectedRoute>
+          <AdminLayout />
+        </ProtectedRoute>
+      }>
         <Route path="/" element={<HomePage />} />
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/orders/:id" element={<OrderDetail />} />
@@ -72,7 +83,11 @@ export default function App() {
       {/* GROUP 3: FULL SCREEN PAGES (No Layout)     */}
       {/* =========================================== */}
       <Route path="/onboarding" element={<Onboarding />} />
-      <Route path="/store/editor" element={<StorefrontEditor />} />
+      <Route path="/store/editor" element={
+        <ProtectedRoute>
+          <StorefrontEditor />
+        </ProtectedRoute>
+      } />
 
       {/* 404 Catch-all */}
       <Route path="*" element={<div className="min-h-screen flex items-center justify-center"><div className="text-center"><h1 className="text-4xl font-bold text-gray-900 mb-4">Page Not Found</h1><p className="text-gray-600">The page you're looking for doesn't exist.</p></div></div>} />
