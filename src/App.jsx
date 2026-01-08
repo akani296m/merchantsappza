@@ -10,6 +10,7 @@ import OrdersPage from './pages/orders';
 import OrderDetail from './pages/orderdetail';
 import ProductCreator from './pages/products';
 import ProductsPage from './pages/productlisting';
+import CustomersPage from './pages/customers';
 import Onboarding from './pages/onboarding';
 
 // Storefront Editor
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/orders/:id" element={<OrderDetail />} />
         <Route path="/products" element={<ProductsPage />} />
         <Route path="/products/create" element={<ProductCreator />} />
+        <Route path="/customers" element={<CustomersPage />} />
       </Route>
 
       {/* =========================================== */}

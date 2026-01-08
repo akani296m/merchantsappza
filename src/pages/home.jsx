@@ -12,6 +12,9 @@ export default function Home() {
   const [timeRange, setTimeRange] = useState('This Week');
   const [recentOrders, setRecentOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
+  const [revenueData, setRevenueData] = useState([]);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [loadingRevenue, setLoadingRevenue] = useState(true);
   const navigate = useNavigate();
 
   // Fetch recent orders from Supabase
@@ -37,22 +40,138 @@ export default function Home() {
     fetchRecentOrders();
   }, []);
 
-  // --- DATA ---
-  const revenueData = [
-    { time: '1 AM', revenue: 20000 },
-    { time: '3 AM', revenue: 25000 },
-    { time: '5 AM', revenue: 45000 },
-    { time: '7 AM', revenue: 55000 },
-    { time: '9 AM', revenue: 70000 },
-    { time: '11 AM', revenue: 85000 },
-    { time: '1 PM', revenue: 95000 },
-    { time: '3 PM', revenue: 88000 },
-    { time: '5 PM', revenue: 92000 },
-    { time: '7 PM', revenue: 98000 },
-    { time: '9 PM', revenue: 105000 },
-    { time: '11 PM', revenue: 100000 }
-  ];
+  // Fetch revenue data from Supabase based on time range
+  useEffect(() => {
+    const fetchRevenueData = async () => {
+      try {
+        setLoadingRevenue(true);
 
+        // Calculate date range based on selection
+        const now = new Date();
+        let startDate = new Date();
+
+        switch (timeRange) {
+          case 'Today':
+            startDate.setHours(0, 0, 0, 0);
+            break;
+          case 'This Week':
+            startDate.setDate(now.getDate() - 7);
+            break;
+          case 'This Month':
+            startDate.setDate(now.getDate() - 30);
+            break;
+          case 'Year to Date':
+            startDate = new Date(now.getFullYear(), 0, 1);
+            break;
+          default:
+            startDate.setDate(now.getDate() - 7);
+        }
+
+        const { data, error } = await supabase
+          .from('orders')
+          .select('created_at, total')
+          .gte('created_at', startDate.toISOString())
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        // Process data based on time range
+        const processedData = processRevenueData(data || [], timeRange);
+        setRevenueData(processedData);
+
+        // Calculate total revenue
+        const total = (data || []).reduce((sum, order) => sum + (order.total || 0), 0);
+        setTotalRevenue(total);
+
+      } catch (error) {
+        console.error('Error fetching revenue data:', error);
+        setRevenueData([]);
+        setTotalRevenue(0);
+      } finally {
+        setLoadingRevenue(false);
+      }
+    };
+
+    fetchRevenueData();
+  }, [timeRange]);
+
+  // Helper function to process revenue data for charts
+  const processRevenueData = (orders, range) => {
+    if (!orders || orders.length === 0) {
+      return getEmptyDataForRange(range);
+    }
+
+    const groupedData = {};
+
+    orders.forEach(order => {
+      const date = new Date(order.created_at);
+      let key;
+
+      switch (range) {
+        case 'Today':
+          // Group by hour
+          key = `${date.getHours()}:00`;
+          break;
+        case 'This Week':
+          // Group by day
+          const daysAgo = Math.floor((new Date() - date) / (1000 * 60 * 60 * 24));
+          key = daysAgo === 0 ? 'Today' : `${7 - daysAgo}d ago`;
+          break;
+        case 'This Month':
+          // Group by week
+          const weeksAgo = Math.floor((new Date() - date) / (1000 * 60 * 60 * 24 * 7));
+          key = `Week ${4 - weeksAgo}`;
+          break;
+        case 'Year to Date':
+          // Group by month
+          key = date.toLocaleDateString('en-US', { month: 'short' });
+          break;
+        default:
+          key = date.toLocaleDateString();
+      }
+
+      if (!groupedData[key]) {
+        groupedData[key] = 0;
+      }
+      groupedData[key] += order.total || 0;
+    });
+
+    // Convert to array format for chart
+    return Object.entries(groupedData).map(([time, revenue]) => ({
+      time,
+      revenue
+    }));
+  };
+
+  // Helper to provide empty data structure when no orders
+  const getEmptyDataForRange = (range) => {
+    switch (range) {
+      case 'Today':
+        return Array.from({ length: 24 }, (_, i) => ({
+          time: `${i}:00`,
+          revenue: 0
+        }));
+      case 'This Week':
+        return ['6d ago', '5d ago', '4d ago', '3d ago', '2d ago', '1d ago', 'Today'].map(day => ({
+          time: day,
+          revenue: 0
+        }));
+      case 'This Month':
+        return ['Week 1', 'Week 2', 'Week 3', 'Week 4'].map(week => ({
+          time: week,
+          revenue: 0
+        }));
+      case 'Year to Date':
+        return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(month => ({
+          time: month,
+          revenue: 0
+        }));
+      default:
+        return [];
+    }
+  };
+
+  // --- DATA ---
   const bestSellers = [
     { id: 1, name: 'Premium Wireless Headphones', unitsSold: 1247, icon: '🎧' },
     { id: 2, name: 'Smart Watch Series X', unitsSold: 1089, icon: '⌚' },
@@ -132,49 +251,68 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-4xl font-bold text-gray-900">
-                {formatCurrency(100000)}
-              </span>
-              <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full">
-                <TrendingUp size={16} />
-                <span className="text-sm font-semibold">+12.5%</span>
-              </div>
+              {loadingRevenue ? (
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <>
+                  <span className="text-4xl font-bold text-gray-900">
+                    {formatCurrency(totalRevenue)}
+                  </span>
+                  {totalRevenue > 0 && (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                      <TrendingUp size={16} />
+                      <span className="text-sm font-semibold">+12.5%</span>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
 
         {/* CHART */}
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={revenueData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis
-              dataKey="time"
-              stroke="#9ca3af"
-              style={{ fontSize: '12px' }}
-            />
-            <YAxis
-              stroke="#9ca3af"
-              style={{ fontSize: '12px' }}
-              tickFormatter={(value) => `${value / 1000}k`}
-            />
-            <Tooltip
-              formatter={(value) => formatCurrency(value)}
-              contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px'
-              }}
-            />
-            <Line
-              type="monotone"
-              dataKey="revenue"
-              stroke="#3b82f6"
-              strokeWidth={3}
-              dot={{ fill: '#3b82f6', r: 4 }}
-              activeDot={{ r: 6 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        {loadingRevenue ? (
+          <div className="flex items-center justify-center" style={{ height: 300 }}>
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : revenueData.length === 0 ? (
+          <div className="flex items-center justify-center flex-col" style={{ height: 300 }}>
+            <TrendingUp className="text-gray-300 mb-3" size={48} />
+            <p className="text-gray-500">No revenue data available for this period</p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={revenueData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis
+                dataKey="time"
+                stroke="#9ca3af"
+                style={{ fontSize: '12px' }}
+              />
+              <YAxis
+                stroke="#9ca3af"
+                style={{ fontSize: '12px' }}
+                tickFormatter={(value) => `${value / 1000}k`}
+              />
+              <Tooltip
+                formatter={(value) => formatCurrency(value)}
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px'
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="revenue"
+                stroke="#3b82f6"
+                strokeWidth={3}
+                dot={{ fill: '#3b82f6', r: 4 }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       {/* Two Column Layout: Best Sellers & Recent Orders */}
