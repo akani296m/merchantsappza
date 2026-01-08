@@ -5,6 +5,28 @@ import { useCart } from '../../context/cartcontext';
 import { useMerchant } from '../context/MerchantContext';
 import { supabase } from '../../lib/supabase';
 
+// Helper function for consistent currency formatting
+const formatCurrency = (amount) => {
+    return Number(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+};
+
+// InputField component defined OUTSIDE the main component to prevent re-creation on every render
+const InputField = ({ name, label, type = 'text', placeholder = '', maxLength, value, onChange, error }) => (
+    <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">{label} *</label>
+        <input
+            type={type}
+            name={name}
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            maxLength={maxLength}
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none ${error ? 'border-red-500' : 'border-gray-300'}`}
+        />
+        {error && <p className="text-red-500 text-sm mt-1 flex items-center gap-1"><AlertCircle size={14} /> {error}</p>}
+    </div>
+);
+
 export default function Checkout() {
     const navigate = useNavigate();
     const { merchantSlug } = useParams();
@@ -92,15 +114,6 @@ export default function Checkout() {
 
     if (cartItems.length === 0) return null;
 
-    const InputField = ({ name, label, type = 'text', placeholder = '', maxLength }) => (
-        <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">{label} *</label>
-            <input type={type} name={name} value={formData[name]} onChange={handleInputChange} placeholder={placeholder} maxLength={maxLength}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none ${errors[name] ? 'border-red-500' : 'border-gray-300'}`} />
-            {errors[name] && <p className="text-red-500 text-sm mt-1 flex items-center gap-1"><AlertCircle size={14} /> {errors[name]}</p>}
-        </div>
-    );
-
     return (
         <div className="bg-gray-50 min-h-screen py-8">
             <div className="max-w-7xl mx-auto px-6">
@@ -115,19 +128,19 @@ export default function Checkout() {
                             <div className="bg-white rounded-lg p-6 shadow-sm">
                                 <h2 className="text-xl font-bold mb-4">Contact Information</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <InputField name="email" label="Email" type="email" placeholder="you@example.com" />
-                                    <InputField name="phone" label="Phone" placeholder="071 234 5678" />
-                                    <InputField name="firstName" label="First Name" />
-                                    <InputField name="lastName" label="Last Name" />
+                                    <InputField name="email" label="Email" type="email" placeholder="you@example.com" value={formData.email} onChange={handleInputChange} error={errors.email} />
+                                    <InputField name="phone" label="Phone" placeholder="071 234 5678" value={formData.phone} onChange={handleInputChange} error={errors.phone} />
+                                    <InputField name="firstName" label="First Name" value={formData.firstName} onChange={handleInputChange} error={errors.firstName} />
+                                    <InputField name="lastName" label="Last Name" value={formData.lastName} onChange={handleInputChange} error={errors.lastName} />
                                 </div>
                             </div>
 
                             <div className="bg-white rounded-lg p-6 shadow-sm">
                                 <h2 className="text-xl font-bold mb-4">Shipping Address</h2>
                                 <div className="space-y-4">
-                                    <InputField name="address" label="Street Address" placeholder="123 Main Street" />
+                                    <InputField name="address" label="Street Address" placeholder="123 Main Street" value={formData.address} onChange={handleInputChange} error={errors.address} />
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <InputField name="city" label="City" />
+                                        <InputField name="city" label="City" value={formData.city} onChange={handleInputChange} error={errors.city} />
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">Province *</label>
                                             <select name="province" value={formData.province} onChange={handleInputChange}
@@ -144,7 +157,7 @@ export default function Checkout() {
                                                 <option value="North West">North West</option>
                                             </select>
                                         </div>
-                                        <InputField name="postalCode" label="Postal Code" maxLength="4" />
+                                        <InputField name="postalCode" label="Postal Code" maxLength="4" value={formData.postalCode} onChange={handleInputChange} error={errors.postalCode} />
                                     </div>
                                 </div>
                             </div>
@@ -156,11 +169,11 @@ export default function Checkout() {
                                     <p className="text-sm text-blue-800">Your payment information is encrypted and secure.</p>
                                 </div>
                                 <div className="space-y-4">
-                                    <InputField name="cardNumber" label="Card Number" placeholder="1234 5678 9012 3456" maxLength="19" />
-                                    <InputField name="cardName" label="Cardholder Name" placeholder="Name on card" />
+                                    <InputField name="cardNumber" label="Card Number" placeholder="1234 5678 9012 3456" maxLength="19" value={formData.cardNumber} onChange={handleInputChange} error={errors.cardNumber} />
+                                    <InputField name="cardName" label="Cardholder Name" placeholder="Name on card" value={formData.cardName} onChange={handleInputChange} error={errors.cardName} />
                                     <div className="grid grid-cols-2 gap-4">
-                                        <InputField name="expiryDate" label="Expiry Date" placeholder="MM/YY" maxLength="5" />
-                                        <InputField name="cvv" label="CVV" placeholder="123" maxLength="4" />
+                                        <InputField name="expiryDate" label="Expiry Date" placeholder="MM/YY" maxLength="5" value={formData.expiryDate} onChange={handleInputChange} error={errors.expiryDate} />
+                                        <InputField name="cvv" label="CVV" placeholder="123" maxLength="4" value={formData.cvv} onChange={handleInputChange} error={errors.cvv} />
                                     </div>
                                 </div>
                             </div>
@@ -178,16 +191,16 @@ export default function Checkout() {
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-medium text-sm truncate">{item.title}</p>
                                                 <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
-                                                <p className="text-sm font-medium mt-1">R {(item.price * item.quantity).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
+                                                <p className="text-sm font-medium mt-1">R {formatCurrency(item.price * item.quantity)}</p>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                                 <div className="space-y-3 mb-6">
-                                    <div className="flex justify-between text-gray-600"><span>Subtotal</span><span>R {subtotal.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span></div>
-                                    <div className="flex justify-between text-gray-600"><span>Shipping</span>{shipping === 0 ? <span className="text-green-600 font-medium">FREE</span> : <span>R {shipping.toFixed(2)}</span>}</div>
-                                    <div className="flex justify-between text-gray-600"><span>VAT (15%)</span><span>R {tax.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span></div>
-                                    <div className="border-t pt-3"><div className="flex justify-between text-lg font-bold"><span>Total</span><span>R {total.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span></div></div>
+                                    <div className="flex justify-between text-gray-600"><span>Subtotal</span><span>R {formatCurrency(subtotal)}</span></div>
+                                    <div className="flex justify-between text-gray-600"><span>Shipping</span>{shipping === 0 ? <span className="text-green-600 font-medium">FREE</span> : <span>R {formatCurrency(shipping)}</span>}</div>
+                                    <div className="flex justify-between text-gray-600"><span>VAT (15%)</span><span>R {formatCurrency(tax)}</span></div>
+                                    <div className="border-t pt-3"><div className="flex justify-between text-lg font-bold"><span>Total</span><span>R {formatCurrency(total)}</span></div></div>
                                 </div>
                                 <button type="submit" disabled={loading} className="w-full bg-black text-white font-bold py-4 rounded-lg hover:bg-gray-800 disabled:bg-gray-400 flex items-center justify-center gap-2">
                                     {loading ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Processing...</> : <><Lock size={18} /> Complete Order</>}
