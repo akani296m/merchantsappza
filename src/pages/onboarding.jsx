@@ -18,6 +18,11 @@ export default function OnboardingCard() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState('');
 
+  // AI name suggestion states
+  const [aiSuggestions, setAiSuggestions] = useState([]);
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
+  const [aiError, setAiError] = useState('');
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
@@ -44,6 +49,45 @@ export default function OnboardingCard() {
       // Automatically create the merchant after a brief moment
       setTimeout(() => createMerchant(), 500);
     }
+  };
+
+  // Generate AI store name suggestions
+  const generateAINames = async () => {
+    setIsLoadingAI(true);
+    setAiError('');
+    setAiSuggestions([]);
+
+    try {
+      const response = await fetch('/api/generate-names', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productType: formData.productStatus,
+          experience: formData.experience,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate names');
+      }
+
+      const data = await response.json();
+      setAiSuggestions(data.names || []);
+    } catch (err) {
+      console.error('Error generating AI names:', err);
+      setAiError('Unable to generate suggestions. Please try again.');
+    } finally {
+      setIsLoadingAI(false);
+    }
+  };
+
+  // Handle clicking on a suggestion
+  const handleSuggestionClick = (name) => {
+    setFormData({ ...formData, storeName: name });
+    setAiSuggestions([]); // Hide suggestions after selection
   };
 
   // Generate a URL-safe slug from store name
@@ -254,9 +298,15 @@ export default function OnboardingCard() {
                 <input
                   type="text"
                   placeholder="e.g. Urban Threads"
-                  className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-black transition-all"
+                  className="w-full border border-gray-300 rounded-lg py-3 px-4 pr-32 focus:outline-none focus:ring-2 focus:ring-black transition-all"
                   value={formData.storeName}
-                  onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, storeName: e.target.value });
+                    // Clear suggestions when user starts typing
+                    if (aiSuggestions.length > 0) {
+                      setAiSuggestions([]);
+                    }
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && formData.storeName.trim()) {
                       handleSelection('storeName', formData.storeName);
@@ -265,16 +315,49 @@ export default function OnboardingCard() {
                   autoFocus
                 />
 
-                {/* AI BUTTON - Placeholder for future feature */}
+                {/* AI BUTTON - Connected to OpenAI */}
                 <button
-                  className="absolute right-2 top-1.5 bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 hover:text-purple-900 text-xs font-medium px-3 py-2 rounded-md flex items-center gap-1.5 transition-colors border border-purple-200"
-                  onClick={() => console.log("AI suggestion feature coming soon")}
+                  className="absolute right-2 top-1.5 bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 hover:text-purple-900 text-xs font-medium px-3 py-2 rounded-md flex items-center gap-1.5 transition-colors border border-purple-200 disabled:opacity-50 disabled:cursor-wait"
+                  onClick={generateAINames}
+                  disabled={isLoadingAI}
                   type="button"
                 >
-                  <Sparkles size={12} />
-                  Let AI help me
+                  {isLoadingAI ? (
+                    <>
+                      <Loader2 size={12} className="animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={12} />
+                      Let AI help me
+                    </>
+                  )}
                 </button>
               </div>
+
+              {/* AI Suggestions */}
+              {aiSuggestions.length > 0 && (
+                <div className="mt-4 max-w-md mx-auto">
+                  <p className="text-sm text-gray-500 mb-2">Click a name to use it:</p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {aiSuggestions.map((name, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleSuggestionClick(name)}
+                        className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 text-gray-700 px-4 py-2 rounded-full text-sm font-medium hover:from-purple-100 hover:to-blue-100 hover:border-purple-300 hover:text-purple-800 transition-all transform hover:scale-105 shadow-sm"
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* AI Error */}
+              {aiError && (
+                <p className="mt-3 text-sm text-orange-600">{aiError}</p>
+              )}
 
               {error && (
                 <p className="mt-3 text-sm text-red-600">{error}</p>
