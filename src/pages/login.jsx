@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/authContext';
 import { Eye, EyeOff, Lock, Mail, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 
@@ -244,6 +244,19 @@ export default function Login() {
                                     </>
                                 )}
                             </button>
+
+                            {/* Signup Link */}
+                            <div className="text-center pt-4 border-t border-white/10">
+                                <p className="text-blue-200/70 text-sm">
+                                    Don't have an account?{' '}
+                                    <Link
+                                        to="/signup"
+                                        className="text-blue-300 hover:text-white font-semibold transition-colors"
+                                    >
+                                        Create one
+                                    </Link>
+                                </p>
+                            </div>
                         </form>
                     )}
                 </div>

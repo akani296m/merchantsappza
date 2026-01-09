@@ -15,6 +15,7 @@ import ProductsPage from './pages/productlisting';
 import CustomersPage from './pages/customers';
 import Onboarding from './pages/onboarding';
 import Login from './pages/login';
+import Signup from './pages/signup';
 
 // Settings Pages
 import {
@@ -49,6 +50,7 @@ export default function App() {
       {/* PUBLIC AUTH ROUTES                         */}
       {/* =========================================== */}
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
 
       {/* =========================================== */}
       {/* ONBOARDING (Protected but no merchant req) */}
