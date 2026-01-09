@@ -62,7 +62,9 @@ export function AdminMerchantProvider({ children }) {
                         business_name,
                         slug,
                         logo_url,
-                        created_at
+                        created_at,
+                        paystack_public_key,
+                        facebook_pixel_id
                     )
                 `)
                 .eq('user_id', user.id)

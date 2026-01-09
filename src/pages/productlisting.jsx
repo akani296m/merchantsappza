@@ -100,7 +100,9 @@ export default function Products() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-gray-600">{product.category}</td>
-                  <td className="px-6 py-4 text-gray-600">{product.price}</td>
+                  <td className="px-6 py-4 text-gray-600">
+                    R {Number(product.price).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
                   <td className="px-6 py-4 text-gray-600">{product.inventory} in stock</td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${product.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'

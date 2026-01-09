@@ -12,10 +12,33 @@ export default function FinanceSettings() {
 
     // Load existing Paystack key when merchant data loads
     useEffect(() => {
-        if (merchant?.paystack_public_key) {
-            setPaystackPublicKey(merchant.paystack_public_key);
-        }
-    }, [merchant]);
+        const fetchPaystackKey = async () => {
+            if (!merchant?.id) return;
+
+            // First, try to use data from context
+            if (merchant.paystack_public_key) {
+                setPaystackPublicKey(merchant.paystack_public_key);
+                return;
+            }
+
+            // Fallback: fetch directly if not in context
+            try {
+                const { data, error } = await supabase
+                    .from('merchants')
+                    .select('paystack_public_key')
+                    .eq('id', merchant.id)
+                    .single();
+
+                if (!error && data?.paystack_public_key) {
+                    setPaystackPublicKey(data.paystack_public_key);
+                }
+            } catch (err) {
+                console.error('Error fetching Paystack key:', err);
+            }
+        };
+
+        fetchPaystackKey();
+    }, [merchant?.id, merchant?.paystack_public_key]);
 
     const handleSavePaystack = async () => {
         if (!merchant?.id) {
@@ -47,7 +70,7 @@ export default function FinanceSettings() {
         }
     };
 
-    const isPaystackConnected = merchant?.paystack_public_key && merchant.paystack_public_key.trim().length > 0;
+    const isPaystackConnected = paystackPublicKey && paystackPublicKey.trim().length > 0;
 
     return (
         <div className="max-w-4xl space-y-6">

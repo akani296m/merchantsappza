@@ -100,7 +100,9 @@ export default function ProductCreator() {
     const input = e.target.value;
     const formatted = formatPrice(input);
 
-    const numeric = parseFloat(formatted.replace(/,/g, '')) || 0;
+    // FIXED: en-ZA locale uses spaces as thousand separators, not commas
+    // Remove all non-numeric characters except the decimal point before parsing
+    const numeric = parseFloat(formatted.replace(/[^\d.]/g, '')) || 0;
 
     setPriceInput(formatted);
     setPrice(numeric);
@@ -486,7 +488,7 @@ export default function ProductCreator() {
             </div>
             <div className="space-y-4">
               <h3 className="text-xl font-semibold">{productTitle || 'Untitled Product'}</h3>
-              <p className="text-2xl font-bold text-blue-600">R {price || '0'}</p>
+              <p className="text-2xl font-bold text-blue-600">R {Number(price || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               {images.length > 0 && (
                 <div className="grid grid-cols-3 gap-2">
                   {images.map(img => (

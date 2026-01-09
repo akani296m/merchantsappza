@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, Store, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
 import { useStorefrontSettings } from './hooks/useStorefrontSettings';
+import { useAdminMerchant } from '../../context/adminMerchantContext';
 import EditorSidebar from './components/EditorSidebar';
 import LivePreview from './components/LivePreview';
 
@@ -10,64 +10,55 @@ import LivePreview from './components/LivePreview';
  * Main Storefront Editor Page
  * Split view with live preview on left and editor sidebar on right
  * 
- * Supports optional ?slug=merchant-slug query parameter to edit a specific merchant
- * Falls back to the first merchant if no slug is provided
+ * SECURITY: Only allows editing stores the logged-in user has access to
+ * Uses the AdminMerchantContext to scope access to authorized merchants only
  */
 export default function StorefrontEditor() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const slugParam = searchParams.get('slug');
 
+    // Get the merchant the current user has access to
+    const {
+        merchant: authorizedMerchant,
+        merchantId: authorizedMerchantId,
+        loading: merchantLoading,
+        hasMerchant
+    } = useAdminMerchant();
+
     const [merchant, setMerchant] = useState(null);
-    const [allMerchants, setAllMerchants] = useState([]);
     const [loadingMerchant, setLoadingMerchant] = useState(true);
     const [merchantError, setMerchantError] = useState(null);
 
-    // Fetch merchant data - either by slug or get all and select first
+    // Set merchant data from context - SECURITY: Only use authorized merchant
     useEffect(() => {
-        async function fetchMerchant() {
-            try {
-                setLoadingMerchant(true);
-                setMerchantError(null);
-
-                if (slugParam) {
-                    // Fetch specific merchant by slug
-                    const { data, error } = await supabase
-                        .from('merchants')
-                        .select('id, slug, store_name, business_name')
-                        .eq('slug', slugParam)
-                        .single();
-
-                    if (error) throw error;
-                    setMerchant(data);
-                    setAllMerchants([data]);
-                } else {
-                    // Fetch all merchants to allow selection
-                    const { data, error } = await supabase
-                        .from('merchants')
-                        .select('id, slug, store_name, business_name')
-                        .order('created_at', { ascending: false });
-
-                    if (error) throw error;
-
-                    if (data && data.length > 0) {
-                        setAllMerchants(data);
-                        // Default to first merchant
-                        setMerchant(data[0]);
-                    } else {
-                        setMerchantError('No merchants found');
-                    }
-                }
-            } catch (err) {
-                console.error('Error fetching merchant:', err);
-                setMerchantError(err.message);
-            } finally {
-                setLoadingMerchant(false);
-            }
+        // Wait for auth context to load
+        if (merchantLoading) {
+            setLoadingMerchant(true);
+            return;
         }
 
-        fetchMerchant();
-    }, [slugParam]);
+        // If user has no merchant access, show error
+        if (!hasMerchant || !authorizedMerchant) {
+            setMerchantError('You do not have access to any stores. Please complete onboarding first.');
+            setLoadingMerchant(false);
+            return;
+        }
+
+        // SECURITY: If a slug parameter is provided, verify the user has access to it
+        if (slugParam && slugParam !== authorizedMerchant.slug) {
+            console.warn('[StorefrontEditor] Access denied - user tried to access unauthorized store:', slugParam);
+            setMerchantError('You do not have permission to edit this store.');
+            setLoadingMerchant(false);
+            return;
+        }
+
+        // User is authorized - set merchant data
+        setMerchant(authorizedMerchant);
+        setMerchantError(null);
+        setLoadingMerchant(false);
+
+    }, [merchantLoading, hasMerchant, authorizedMerchant, slugParam]);
 
     // Use the storefront settings hook with merchant ID
     const {
@@ -81,17 +72,6 @@ export default function StorefrontEditor() {
         saveSettings,
         resetSettings
     } = useStorefrontSettings(merchant?.id);
-
-    // Handle merchant selection change
-    const handleMerchantChange = (e) => {
-        const selectedId = e.target.value;
-        const selected = allMerchants.find(m => m.id === selectedId);
-        if (selected) {
-            setMerchant(selected);
-            // Update URL with slug parameter
-            navigate(`/store/editor?slug=${selected.slug}`, { replace: true });
-        }
-    };
 
     // Show loading state
     if (loadingMerchant) {
@@ -140,26 +120,12 @@ export default function StorefrontEditor() {
                     </button>
                     <div className="h-6 w-px bg-gray-200"></div>
 
-                    {/* Store Selector */}
+                    {/* Store Name - Users can only edit their own store */}
                     <div className="flex items-center gap-2">
                         <Store size={20} className="text-blue-500" />
-                        {allMerchants.length > 1 ? (
-                            <select
-                                value={merchant.id}
-                                onChange={handleMerchantChange}
-                                className="font-semibold text-gray-900 bg-transparent border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
-                            >
-                                {allMerchants.map((m) => (
-                                    <option key={m.id} value={m.id}>
-                                        {m.store_name || m.business_name || m.slug}
-                                    </option>
-                                ))}
-                            </select>
-                        ) : (
-                            <span className="font-semibold text-gray-900">
-                                {merchant.store_name || merchant.business_name || 'Your Store'}
-                            </span>
-                        )}
+                        <span className="font-semibold text-gray-900">
+                            {merchant.store_name || merchant.business_name || 'Your Store'}
+                        </span>
                     </div>
 
                     {/* Editing indicator */}

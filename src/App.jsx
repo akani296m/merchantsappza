@@ -16,6 +16,7 @@ import CustomersPage from './pages/customers';
 import Onboarding from './pages/onboarding';
 import Login from './pages/login';
 import Signup from './pages/signup';
+import FacebookMarketing from './pages/marketing/Facebook';
 
 // Settings Pages
 import {
@@ -81,7 +82,7 @@ export default function App() {
 
         {/* Marketing Routes */}
         <Route path="/marketing/email" element={<div className="p-8"><h1 className="text-2xl font-bold mb-2">Email Marketing</h1><p className="text-gray-500">Connect with your customers via email. Feature coming soon.</p></div>} />
-        <Route path="/marketing/facebook" element={<div className="p-8"><h1 className="text-2xl font-bold mb-2">Facebook Marketing</h1><p className="text-gray-500">Manage your Facebook ads and posts. Feature coming soon.</p></div>} />
+        <Route path="/marketing/facebook" element={<FacebookMarketing />} />
         <Route path="/marketing/tiktok" element={<div className="p-8"><h1 className="text-2xl font-bold mb-2">TikTok Marketing</h1><p className="text-gray-500">Create viral content on TikTok. Feature coming soon.</p></div>} />
       </Route>
 
