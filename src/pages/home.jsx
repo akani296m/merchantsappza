@@ -5,8 +5,10 @@ import {
 } from 'recharts';
 import { TrendingUp, Package, Edit2, ShoppingBag, ChevronRight, Clock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAdminMerchant } from '../context/adminMerchantContext';
 
 export default function Home() {
+  const { merchantId, merchant, loading: merchantLoading } = useAdminMerchant();
   const [editingProduct, setEditingProduct] = useState(null);
   // NEW: State for the dropdown
   const [timeRange, setTimeRange] = useState('This Week');
@@ -17,14 +19,22 @@ export default function Home() {
   const [loadingRevenue, setLoadingRevenue] = useState(true);
   const navigate = useNavigate();
 
-  // Fetch recent orders from Supabase
+  // Fetch recent orders from Supabase - scoped to merchant
   useEffect(() => {
     const fetchRecentOrders = async () => {
+      // Wait for merchant context
+      if (merchantLoading || !merchantId) {
+        setLoadingOrders(false);
+        setRecentOrders([]);
+        return;
+      }
+
       try {
         setLoadingOrders(true);
         const { data, error } = await supabase
           .from('orders')
           .select('*')
+          .eq('merchant_id', merchantId) // ✅ Scope to current merchant
           .order('created_at', { ascending: false })
           .limit(5);
 
@@ -38,11 +48,19 @@ export default function Home() {
     };
 
     fetchRecentOrders();
-  }, []);
+  }, [merchantId, merchantLoading]);
 
-  // Fetch revenue data from Supabase based on time range
+  // Fetch revenue data from Supabase based on time range - scoped to merchant
   useEffect(() => {
     const fetchRevenueData = async () => {
+      // Wait for merchant context
+      if (merchantLoading || !merchantId) {
+        setLoadingRevenue(false);
+        setRevenueData([]);
+        setTotalRevenue(0);
+        return;
+      }
+
       try {
         setLoadingRevenue(true);
 
@@ -70,6 +88,7 @@ export default function Home() {
         const { data, error } = await supabase
           .from('orders')
           .select('created_at, total')
+          .eq('merchant_id', merchantId) // ✅ Scope to current merchant
           .gte('created_at', startDate.toISOString())
           .order('created_at', { ascending: true });
 
@@ -93,7 +112,7 @@ export default function Home() {
     };
 
     fetchRevenueData();
-  }, [timeRange]);
+  }, [timeRange, merchantId, merchantLoading]);
 
   // Helper function to process revenue data for charts
   const processRevenueData = (orders, range) => {

@@ -2,21 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, Package, Truck, CheckCircle, Clock, XCircle, Eye, Loader2, Download, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAdminMerchant } from '../context/adminMerchantContext';
 
 export default function Orders() {
+  const { merchantId, loading: merchantLoading } = useAdminMerchant();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
 
-  // Fetch orders from Supabase
+  // Fetch orders from Supabase - scoped to merchant
   const fetchOrders = async () => {
+    // Don't fetch if no merchant
+    if (!merchantId) {
+      setOrders([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('orders')
         .select('*')
+        .eq('merchant_id', merchantId) // ✅ Scope to current merchant
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -29,8 +39,13 @@ export default function Orders() {
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    if (!merchantLoading && merchantId) {
+      fetchOrders();
+    } else if (!merchantLoading) {
+      setOrders([]);
+      setLoading(false);
+    }
+  }, [merchantId, merchantLoading]);
 
   // Filter and sort orders
   const filteredOrders = orders

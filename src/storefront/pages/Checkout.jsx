@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { ShoppingBag, ArrowLeft, Lock, AlertCircle } from 'lucide-react';
+import PaystackPop from '@paystack/inline-js';
 import { useCart } from '../../context/cartcontext';
 import { useMerchant } from '../context/MerchantContext';
 import { supabase } from '../../lib/supabase';
@@ -40,7 +41,6 @@ export default function Checkout() {
     const [formData, setFormData] = useState({
         email: '', firstName: '', lastName: '', phone: '',
         address: '', city: '', province: '', postalCode: '',
-        cardNumber: '', cardName: '', expiryDate: '', cvv: '',
         orderNotes: ''
     });
 
@@ -72,18 +72,11 @@ export default function Checkout() {
         if (!formData.city) newErrors.city = 'City is required';
         if (!formData.province) newErrors.province = 'Province is required';
         if (!formData.postalCode) newErrors.postalCode = 'Postal code is required';
-        if (!formData.cardNumber) newErrors.cardNumber = 'Card number is required';
-        if (!formData.cardName) newErrors.cardName = 'Cardholder name is required';
-        if (!formData.expiryDate) newErrors.expiryDate = 'Expiry date is required';
-        if (!formData.cvv) newErrors.cvv = 'CVV is required';
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!validateForm()) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
-        setLoading(true);
+    const handlePaystackSuccess = async (reference) => {
         isCompletingOrder.current = true;
 
         try {
@@ -92,22 +85,97 @@ export default function Checkout() {
                 customer_email: formData.email,
                 customer_name: `${formData.firstName} ${formData.lastName}`,
                 customer_phone: formData.phone,
-                shipping_address: { address: formData.address, city: formData.city, province: formData.province, postalCode: formData.postalCode },
-                items: cartItems.map(item => ({ product_id: item.id, title: item.title, quantity: item.quantity, price: item.price, subtotal: item.price * item.quantity })),
-                subtotal, shipping, tax, total,
-                status: 'pending', payment_status: 'pending',
+                shipping_address: {
+                    address: formData.address,
+                    city: formData.city,
+                    province: formData.province,
+                    postalCode: formData.postalCode
+                },
+                items: cartItems.map(item => ({
+                    product_id: item.id,
+                    title: item.title,
+                    quantity: item.quantity,
+                    price: item.price,
+                    subtotal: item.price * item.quantity
+                })),
+                subtotal,
+                shipping,
+                tax,
+                total,
+                status: 'processing',
+                payment_status: 'paid',
+                payment_reference: reference.reference,
+                payment_method: 'paystack',
                 notes: formData.orderNotes || null,
                 created_at: new Date().toISOString()
             };
 
             const { data, error } = await supabase.from('orders').insert([orderData]).select().single();
             if (error) throw error;
+
             clearCart();
-            navigate(`${basePath}/order-confirmation/${data.id}`, { state: { orderId: data.id, orderData: data } });
+            navigate(`${basePath}/order-confirmation/${data.id}`, {
+                state: { orderId: data.id, orderData: data }
+            });
         } catch (error) {
             console.error('Error creating order:', error);
-            alert('There was an error processing your order. Please try again.');
+            alert('Payment successful but order creation failed. Please contact support with reference: ' + reference.reference);
         } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        // Validate form
+        if (!validateForm()) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
+        // Check if merchant has Paystack configured
+        if (!merchant?.paystack_public_key) {
+            alert('Payment gateway not configured. Please contact the store owner.');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const paystack = new PaystackPop();
+
+            paystack.newTransaction({
+                key: merchant.paystack_public_key,
+                email: formData.email,
+                amount: Math.round(total * 100), // Paystack expects amount in kobo (cents)
+                currency: 'ZAR',
+                ref: `${merchant.slug}-${Date.now()}`,
+                metadata: {
+                    custom_fields: [
+                        {
+                            display_name: 'Customer Name',
+                            variable_name: 'customer_name',
+                            value: `${formData.firstName} ${formData.lastName}`
+                        },
+                        {
+                            display_name: 'Phone',
+                            variable_name: 'phone',
+                            value: formData.phone
+                        }
+                    ]
+                },
+                onSuccess: (transaction) => {
+                    handlePaystackSuccess(transaction);
+                },
+                onCancel: () => {
+                    setLoading(false);
+                    isCompletingOrder.current = false;
+                }
+            });
+        } catch (error) {
+            console.error('Error initializing payment:', error);
+            alert('There was an error processing your payment. Please try again.');
             setLoading(false);
         }
     };
@@ -163,17 +231,37 @@ export default function Checkout() {
                             </div>
 
                             <div className="bg-white rounded-lg p-6 shadow-sm">
-                                <h2 className="text-xl font-bold mb-4">Payment Information</h2>
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 flex items-start gap-3">
-                                    <Lock className="text-blue-600" size={20} />
-                                    <p className="text-sm text-blue-800">Your payment information is encrypted and secure.</p>
-                                </div>
-                                <div className="space-y-4">
-                                    <InputField name="cardNumber" label="Card Number" placeholder="1234 5678 9012 3456" maxLength="19" value={formData.cardNumber} onChange={handleInputChange} error={errors.cardNumber} />
-                                    <InputField name="cardName" label="Cardholder Name" placeholder="Name on card" value={formData.cardName} onChange={handleInputChange} error={errors.cardName} />
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <InputField name="expiryDate" label="Expiry Date" placeholder="MM/YY" maxLength="5" value={formData.expiryDate} onChange={handleInputChange} error={errors.expiryDate} />
-                                        <InputField name="cvv" label="CVV" placeholder="123" maxLength="4" value={formData.cvv} onChange={handleInputChange} error={errors.cvv} />
+                                <h2 className="text-xl font-bold mb-4">Payment Method</h2>
+                                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-6">
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <Lock className="text-white" size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-gray-900 mb-2">Secure Payment with Paystack</h3>
+                                            <p className="text-sm text-gray-700 mb-3">
+                                                When you click "Complete Order", you'll be redirected to our secure payment gateway to complete your purchase.
+                                            </p>
+                                            <div className="space-y-2 text-sm text-gray-600">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                                    <span>Credit & Debit Cards</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                                    <span>Bank Transfer</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                                    <span>Mobile Money</span>
+                                                </div>
+                                            </div>
+                                            <div className="mt-4 pt-4 border-t border-blue-200">
+                                                <p className="text-xs text-gray-500">
+                                                    🔒 Your payment information is encrypted and secure. We never store your card details.
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

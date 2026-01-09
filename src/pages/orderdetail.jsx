@@ -2,24 +2,35 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Package, Truck, CheckCircle, Clock, MapPin, CreditCard, User, XCircle, Loader2, Save } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAdminMerchant } from '../context/adminMerchantContext';
 
 export default function OrderDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { merchantId, loading: merchantLoading } = useAdminMerchant();
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState('');
 
-    // Fetch order from Supabase
+    // Fetch order from Supabase - scoped to merchant
     useEffect(() => {
         const fetchOrder = async () => {
+            // Wait for merchant context
+            if (merchantLoading || !merchantId) {
+                if (!merchantLoading) {
+                    setLoading(false);
+                }
+                return;
+            }
+
             try {
                 setLoading(true);
                 const { data, error } = await supabase
                     .from('orders')
                     .select('*')
                     .eq('id', id)
+                    .eq('merchant_id', merchantId) // ✅ Scope to current merchant
                     .single();
 
                 if (error) throw error;
@@ -33,7 +44,7 @@ export default function OrderDetail() {
         };
 
         fetchOrder();
-    }, [id]);
+    }, [id, merchantId, merchantLoading]);
 
     const formatCurrency = (value) => {
         return `R ${Number(value).toLocaleString('en-ZA', {
@@ -95,13 +106,18 @@ export default function OrderDetail() {
 
     const handleUpdateStatus = async () => {
         if (selectedStatus === order.status) return;
+        if (!merchantId) {
+            alert('Unable to update - merchant not identified');
+            return;
+        }
 
         try {
             setUpdating(true);
             const { error } = await supabase
                 .from('orders')
                 .update({ status: selectedStatus })
-                .eq('id', id);
+                .eq('id', id)
+                .eq('merchant_id', merchantId); // ✅ Security: ensure order belongs to this merchant
 
             if (error) throw error;
 

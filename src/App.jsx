@@ -4,6 +4,7 @@ import { Routes, Route } from 'react-router-dom';
 // Admin Layouts & Components
 import AdminLayout from './components/adminlayout';
 import ProtectedRoute from './components/protectedRoute';
+import RequireMerchant from './components/requireMerchant';
 
 // Admin Pages
 import HomePage from './pages/home';
@@ -50,12 +51,23 @@ export default function App() {
       <Route path="/login" element={<Login />} />
 
       {/* =========================================== */}
+      {/* ONBOARDING (Protected but no merchant req) */}
+      {/* =========================================== */}
+      <Route path="/onboarding" element={
+        <ProtectedRoute>
+          <Onboarding />
+        </ProtectedRoute>
+      } />
+
+      {/* =========================================== */}
       {/* GROUP 1: ADMIN DASHBOARD ROUTES (PROTECTED)*/}
-      {/* Requires authentication                    */}
+      {/* Requires authentication AND merchant        */}
       {/* =========================================== */}
       <Route element={
         <ProtectedRoute>
-          <AdminLayout />
+          <RequireMerchant>
+            <AdminLayout />
+          </RequireMerchant>
         </ProtectedRoute>
       }>
         <Route path="/" element={<HomePage />} />
@@ -96,12 +108,13 @@ export default function App() {
       </Route>
 
       {/* =========================================== */}
-      {/* GROUP 3: FULL SCREEN PAGES (No Layout)     */}
+      {/* STOREFRONT EDITOR (Protected + Merchant)   */}
       {/* =========================================== */}
-      <Route path="/onboarding" element={<Onboarding />} />
       <Route path="/store/editor" element={
         <ProtectedRoute>
-          <StorefrontEditor />
+          <RequireMerchant>
+            <StorefrontEditor />
+          </RequireMerchant>
         </ProtectedRoute>
       } />
 
@@ -110,7 +123,9 @@ export default function App() {
       {/* =========================================== */}
       <Route path="/settings" element={
         <ProtectedRoute>
-          <SettingsLayout />
+          <RequireMerchant>
+            <SettingsLayout />
+          </RequireMerchant>
         </ProtectedRoute>
       }>
         <Route path="general" element={<GeneralSettings />} />

@@ -1,21 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Download, Upload, UserPlus, Users, SlidersHorizontal, ArrowUpDown, MoreVertical, Mail, ShoppingBag, Loader2, BarChart3 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAdminMerchant } from '../context/adminMerchantContext';
 
 export default function Customers() {
+    const { merchantId, loading: merchantLoading } = useAdminMerchant();
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCustomers, setSelectedCustomers] = useState([]);
     const [sortBy, setSortBy] = useState('newest');
 
-    // Fetch customers from orders (unique customers)
+    // Fetch customers from orders (unique customers) - scoped to merchant
     const fetchCustomers = async () => {
+        // Don't fetch if no merchant
+        if (!merchantId) {
+            setCustomers([]);
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
             const { data, error } = await supabase
                 .from('orders')
                 .select('customer_name, customer_email, customer_phone, created_at, items')
+                .eq('merchant_id', merchantId) // ✅ Scope to current merchant
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -80,8 +90,13 @@ export default function Customers() {
     };
 
     useEffect(() => {
-        fetchCustomers();
-    }, []);
+        if (!merchantLoading && merchantId) {
+            fetchCustomers();
+        } else if (!merchantLoading) {
+            setCustomers([]);
+            setLoading(false);
+        }
+    }, [merchantId, merchantLoading]);
 
     // Filter and sort customers
     const filteredCustomers = customers
