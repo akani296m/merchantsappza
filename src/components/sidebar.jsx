@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, ShoppingBag, Tag, User, Target, Badge, Image, Globe,
-  Building, BarChart3, Settings, ChevronRight, Store, Plus, PlusCircle, Menu, X, LogOut, Loader2
+  Building, BarChart3, Settings, ChevronRight, ChevronDown, Store, Plus, PlusCircle, Menu, X, LogOut, Loader2, Megaphone
 } from 'lucide-react';
 import { useAuth } from '../context/authContext';
 
@@ -11,6 +11,7 @@ export default function Sidebar() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState({});
 
   const { user, signOut } = useAuth();
 
@@ -34,30 +35,87 @@ export default function Sidebar() {
     { name: 'Products', icon: Tag, path: '/products' },
     { name: 'Add Product', icon: PlusCircle, path: '/products/create' },
     { name: 'Customers', icon: User, path: '/customers' },
+    {
+      name: 'Marketing',
+      icon: Megaphone,
+      path: '/marketing', // This path acts as an ID for expansion
+      children: [
+        { name: 'Email', path: '/marketing/email' },
+        { name: 'Facebook', path: '/marketing/facebook' },
+        { name: 'TikTok', path: '/marketing/tiktok' },
+      ]
+    },
     { name: 'Analytics', icon: BarChart3, path: '/analytics' },
   ];
 
+  const toggleSubmenu = (path) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [path]: !prev[path]
+    }));
+  };
+
   // A small internal component for the buttons to keep things clean
-  const NavItem = ({ name, icon: Icon, path, onClick }) => {
-    // Check if the current URL matches the path to highlight it
-    const isActive = location.pathname === path;
+  const NavItem = ({ name, icon: Icon, path, children, onClick }) => {
+    // Check if the current URL matches the path (or sub-paths) to highlight it
+    const isMainActive = location.pathname === path;
+    const isChildActive = children?.some(child => location.pathname === child.path);
+    const isActive = isMainActive || isChildActive;
+
+    // Check if this menu is expanded
+    const isExpanded = expandedMenus[path];
 
     const handleClick = () => {
-      navigate(path);
-      if (onClick) onClick();
+      if (children) {
+        toggleSubmenu(path);
+      } else {
+        navigate(path);
+        if (onClick) onClick();
+      }
     };
 
     return (
-      <button
-        onClick={handleClick}
-        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] transition-colors ${isActive
-          ? 'bg-white text-[#303030] font-medium shadow-sm'
-          : 'text-[#303030] hover:bg-[#ECECEC]'
-          }`}
-      >
-        <Icon size={20} strokeWidth={2} />
-        <span className="text-[15px] font-medium">{name}</span>
-      </button>
+      <div className="w-full">
+        <button
+          onClick={handleClick}
+          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-[10px] transition-colors ${isActive && !children // Only highlight main if it's a direct link or if we assume parent highlights with child (design choice)
+              ? 'bg-white text-[#303030] font-medium shadow-sm'
+              : 'text-[#303030] hover:bg-[#ECECEC]'
+            }`}
+        >
+          <div className="flex items-center gap-3">
+            <Icon size={20} strokeWidth={2} />
+            <span className="text-[15px] font-medium">{name}</span>
+          </div>
+          {children && (
+            isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />
+          )}
+        </button>
+
+        {/* Sub-menu items */}
+        {children && isExpanded && (
+          <div className="mt-1 ml-4 space-y-1">
+            {children.map((child) => {
+              const isChildActive = location.pathname === child.path;
+              return (
+                <button
+                  key={child.path}
+                  onClick={() => {
+                    navigate(child.path);
+                    if (onClick) onClick();
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-[8px] transition-colors ${isChildActive
+                      ? 'bg-white text-[#303030] font-medium shadow-sm'
+                      : 'text-[#6D6D6D] hover:bg-[#ECECEC]'
+                    }`}
+                >
+                  <span className="text-[14px]">{child.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -94,7 +152,7 @@ export default function Sidebar() {
         transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
-        <nav className="flex-1 flex flex-col space-y-1 mt-12 md:mt-0">
+        <nav className="flex-1 flex flex-col space-y-1 mt-12 md:mt-0 overflow-y-auto">
 
           {/* Main Menu */}
           {navItems.map((item) => (
