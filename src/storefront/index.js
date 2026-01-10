@@ -9,6 +9,7 @@ export { default as OrderConfirmation } from './pages/OrderConfirmation';
 // Storefront Components
 export { default as StorefrontLayout } from './components/StorefrontLayout';
 export { default as StorefrontNotFound } from './components/StorefrontNotFound';
+export { default as CustomDomainStorefront } from './components/CustomDomainStorefront';
 
 // Storefront Context
 export { MerchantProvider, useMerchant } from './context/MerchantContext';
@@ -18,3 +19,5 @@ export { useMerchantProducts, useMerchantProduct } from './hooks/useMerchantProd
 
 // Storefront Utilities
 export { getMerchantBySlug } from './utils/getMerchantBySlug';
+export { getMerchantByDomain } from './utils/getMerchantByDomain';
+

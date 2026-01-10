@@ -1,35 +1,108 @@
-import React, { useState } from 'react';
-import { Save, Building2, Mail, Phone, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Save, Building2, Mail, Phone, MapPin, Loader2, CheckCircle } from 'lucide-react';
+import { useAdminMerchant } from '../../context/adminMerchantContext';
+import { supabase } from '../../lib/supabase';
 
 export default function GeneralSettings() {
+    const { merchant, merchantId, loading: merchantLoading, refetch } = useAdminMerchant();
+
     const [formData, setFormData] = useState({
-        storeName: 'My Store',
-        storeEmail: 'store@example.com',
-        storePhone: '+1 (555) 123-4567',
-        storeAddress: '123 Main Street',
-        city: 'New York',
-        state: 'NY',
-        zipCode: '10001',
-        country: 'United States',
-        timezone: 'America/New_York',
-        currency: 'USD',
+        storeName: '',
+        storeEmail: '',
+        storePhone: '',
+        storeAddress: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        country: 'South Africa',
+        timezone: 'Africa/Johannesburg',
+        currency: 'ZAR',
     });
 
     const [isSaving, setIsSaving] = useState(false);
+    const [saveStatus, setSaveStatus] = useState(null); // 'success' | 'error' | null
+
+    // Load merchant data when component mounts or merchant changes
+    useEffect(() => {
+        if (merchant) {
+            setFormData(prev => ({
+                ...prev,
+                // Use store_name or name as the store name (prefer store_name as it's what's set during onboarding)
+                storeName: merchant.store_name || merchant.name || merchant.business_name || '',
+                storeEmail: merchant.email || '',
+                storePhone: merchant.phone || '',
+                storeAddress: merchant.address || '',
+                city: merchant.city || '',
+                state: merchant.state || '',
+                zipCode: merchant.zip_code || '',
+                country: merchant.country || 'South Africa',
+                timezone: merchant.timezone || 'Africa/Johannesburg',
+                currency: merchant.currency || 'ZAR',
+            }));
+        }
+    }, [merchant]);
 
     const handleChange = (e) => {
         setFormData({
             ...formData,
             [e.target.name]: e.target.value,
         });
+        // Clear save status when user makes changes
+        if (saveStatus) setSaveStatus(null);
     };
 
     const handleSave = async () => {
+        if (!merchantId) {
+            setSaveStatus('error');
+            return;
+        }
+
         setIsSaving(true);
-        // TODO: Implement save logic with Supabase
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setIsSaving(false);
+        setSaveStatus(null);
+
+        try {
+            const { error } = await supabase
+                .from('merchants')
+                .update({
+                    name: formData.storeName,
+                    store_name: formData.storeName,
+                    business_name: formData.storeName,
+                    email: formData.storeEmail,
+                    phone: formData.storePhone,
+                    address: formData.storeAddress,
+                    city: formData.city,
+                    state: formData.state,
+                    zip_code: formData.zipCode,
+                    country: formData.country,
+                    timezone: formData.timezone,
+                    currency: formData.currency,
+                })
+                .eq('id', merchantId);
+
+            if (error) throw error;
+
+            setSaveStatus('success');
+            // Refresh merchant context to reflect changes
+            await refetch();
+
+            // Clear success message after 3 seconds
+            setTimeout(() => setSaveStatus(null), 3000);
+        } catch (err) {
+            console.error('Error saving general settings:', err);
+            setSaveStatus('error');
+        } finally {
+            setIsSaving(false);
+        }
     };
+
+    // Show loading state while fetching merchant data
+    if (merchantLoading) {
+        return (
+            <div className="max-w-4xl flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-4xl">
@@ -229,7 +302,22 @@ export default function GeneralSettings() {
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-xl flex justify-end">
+                <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-xl flex justify-between items-center">
+                    {/* Save Status Message */}
+                    <div className="flex items-center gap-2">
+                        {saveStatus === 'success' && (
+                            <span className="text-sm text-green-600 flex items-center gap-1">
+                                <CheckCircle size={16} />
+                                Settings saved successfully
+                            </span>
+                        )}
+                        {saveStatus === 'error' && (
+                            <span className="text-sm text-red-600">
+                                Failed to save settings. Please try again.
+                            </span>
+                        )}
+                    </div>
+
                     <button
                         onClick={handleSave}
                         disabled={isSaving}

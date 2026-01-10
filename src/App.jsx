@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 
 // Admin Layouts & Components
@@ -40,10 +40,56 @@ import {
   ProductDetail,
   Cart,
   Checkout,
-  OrderConfirmation
+  OrderConfirmation,
+  CustomDomainStorefront
 } from './storefront';
 
+// List of domains that host the admin dashboard
+const ADMIN_DOMAINS = [
+  'merchants.io',
+  'www.merchants.io',
+  'localhost',
+  'localhost:5173', // Vite dev server
+];
+
+/**
+ * Determines if the current hostname is an admin domain
+ */
+function isAdminDomain(hostname) {
+  return ADMIN_DOMAINS.some(domain =>
+    hostname === domain || hostname.startsWith(`${domain}:`)
+  );
+}
+
+/**
+ * Main App Component
+ * 
+ * Routing Logic:
+ * - If on a custom domain (e.g., shop.acme.com) → Render CustomDomainStorefront
+ * - If on admin domain (merchants.io, localhost) → Render admin routes + /s/:slug storefront routes
+ */
 export default function App() {
+  const [isCustomDomain, setIsCustomDomain] = useState(false);
+  const [isCheckingDomain, setIsCheckingDomain] = useState(true);
+
+  useEffect(() => {
+    const hostname = window.location.hostname;
+    const customDomain = !isAdminDomain(hostname);
+    setIsCustomDomain(customDomain);
+    setIsCheckingDomain(false);
+  }, []);
+
+  // Show nothing while checking domain (prevents flash of wrong content)
+  if (isCheckingDomain) {
+    return null;
+  }
+
+  // CUSTOM DOMAIN: Render storefront at root level
+  if (isCustomDomain) {
+    return <CustomDomainStorefront />;
+  }
+
+  // ADMIN DOMAIN: Render admin routes + /s/:slug storefront routes
   return (
     <Routes>
 
@@ -88,7 +134,7 @@ export default function App() {
 
       {/* =========================================== */}
       {/* GROUP 2: PUBLIC STOREFRONT ROUTES          */}
-      {/* New: /s/:merchantSlug/*                    */}
+      {/* Via /s/:merchantSlug/* (slug-based)        */}
       {/* =========================================== */}
       <Route path="/s/:merchantSlug" element={<StorefrontLayout />}>
         {/* /s/:merchantSlug → storefront home */}

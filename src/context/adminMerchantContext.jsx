@@ -58,6 +58,7 @@ export function AdminMerchantProvider({ children }) {
                     merchant_id,
                     merchants (
                         id,
+                        name,
                         store_name,
                         business_name,
                         slug,
