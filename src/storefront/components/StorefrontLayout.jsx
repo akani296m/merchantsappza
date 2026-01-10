@@ -10,7 +10,7 @@ import StorefrontNotFound from './StorefrontNotFound';
  */
 function StorefrontLayoutInner() {
     const { getTotalItems } = useCart();
-    const { merchant, merchantSlug, loading, notFound } = useMerchant();
+    const { merchant, merchantSlug, loading, notFound, isCustomDomain } = useMerchant();
     const cartCount = getTotalItems();
 
     // Show loading state while fetching merchant
@@ -28,7 +28,8 @@ function StorefrontLayoutInner() {
     }
 
     // Build base path for this merchant's storefront
-    const basePath = `/s/${merchantSlug}`;
+    // If on custom domain, use root path. Otherwise use /s/:slug
+    const basePath = isCustomDomain ? '' : `/s/${merchantSlug}`;
 
     // Get merchant branding (with fallbacks)
     const storeName = merchant.store_name || merchant.business_name || 'Store';
@@ -42,7 +43,7 @@ function StorefrontLayoutInner() {
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
 
                     {/* Logo / Store Name */}
-                    <Link to={basePath} className="text-xl font-bold tracking-widest uppercase">
+                    <Link to={basePath || '/'} className="text-xl font-bold tracking-widest uppercase">
                         {logoUrl ? (
                             <img src={logoUrl} alt={storeName} className="h-8 max-w-[150px] object-contain" />
                         ) : (
@@ -54,7 +55,7 @@ function StorefrontLayoutInner() {
 
                     {/* Desktop Links */}
                     <div className="hidden md:flex items-center space-x-8 text-sm font-medium">
-                        <Link to={basePath} className="hover:text-gray-500 transition">Home</Link>
+                        <Link to={basePath || '/'} className="hover:text-gray-500 transition">Home</Link>
                         <Link to={`${basePath}/products`} className="hover:text-gray-500 transition">Catalog</Link>
                     </div>
 
