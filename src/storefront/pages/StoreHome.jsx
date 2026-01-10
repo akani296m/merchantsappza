@@ -25,11 +25,12 @@ const DEFAULT_TRUST_BADGES = [
 
 export default function StoreHome() {
     const { merchantSlug } = useParams();
-    const { merchant } = useMerchant();
+    const { merchant, isCustomDomain } = useMerchant();
     const { products, loading } = useMerchantProducts();
 
     // Base path for this merchant's storefront
-    const basePath = `/s/${merchantSlug}`;
+    // If on custom domain, use root path. Otherwise use /s/:slug
+    const basePath = isCustomDomain ? '' : `/s/${merchantSlug}`;
 
     // Helper to extract actual URL from nested objects or return string as-is
     const getImageUrl = (imageItem) => {

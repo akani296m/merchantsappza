@@ -31,12 +31,12 @@ const InputField = ({ name, label, type = 'text', placeholder = '', maxLength, v
 export default function Checkout() {
     const navigate = useNavigate();
     const { merchantSlug } = useParams();
-    const { merchant } = useMerchant();
+    const { merchant, isCustomDomain } = useMerchant();
     const { cartItems, getSubtotal, clearCart } = useCart();
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const isCompletingOrder = useRef(false);
-    const basePath = `/s/${merchantSlug}`;
+    const basePath = isCustomDomain ? '' : `/s/${merchantSlug}`;
 
     const [formData, setFormData] = useState({
         email: '', firstName: '', lastName: '', phone: '',

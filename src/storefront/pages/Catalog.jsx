@@ -2,9 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Search, SlidersHorizontal, X, Package, Loader2 } from 'lucide-react';
 import { useMerchantProducts } from '../hooks/useMerchantProducts';
+import { useMerchant } from '../context/MerchantContext';
 
 export default function Catalog() {
     const { merchantSlug } = useParams();
+    const { isCustomDomain } = useMerchant();
     const { products, loading } = useMerchantProducts();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
@@ -12,7 +14,8 @@ export default function Catalog() {
     const [showFilters, setShowFilters] = useState(false);
 
     // Base path for this merchant's storefront
-    const basePath = `/s/${merchantSlug}`;
+    // If on custom domain, use root path. Otherwise use /s/:slug
+    const basePath = isCustomDomain ? '' : `/s/${merchantSlug}`;
 
     // Helper to extract actual URL from nested objects or return string as-is
     const getImageUrl = (imageItem) => {

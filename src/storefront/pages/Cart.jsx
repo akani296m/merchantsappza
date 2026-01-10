@@ -2,12 +2,14 @@ import React from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, ArrowLeft, Package } from 'lucide-react';
 import { useCart } from '../../context/cartcontext';
+import { useMerchant } from '../context/MerchantContext';
 
 export default function Cart() {
     const navigate = useNavigate();
     const { merchantSlug } = useParams();
+    const { isCustomDomain } = useMerchant();
     const { cartItems, removeFromCart, updateQuantity, clearCart, getTotalItems, getSubtotal } = useCart();
-    const basePath = `/s/${merchantSlug}`;
+    const basePath = isCustomDomain ? '' : `/s/${merchantSlug}`;
 
     const subtotal = getSubtotal();
     const shipping = subtotal >= 1500 ? 0 : 150;

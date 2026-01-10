@@ -1,13 +1,15 @@
 import React, { useEffect } from 'react';
 import { useLocation, useNavigate, Link, useParams } from 'react-router-dom';
 import { CheckCircle, Package, Mail, ArrowRight, Download } from 'lucide-react';
+import { useMerchant } from '../context/MerchantContext';
 
 export default function OrderConfirmation() {
     const location = useLocation();
     const navigate = useNavigate();
     const { merchantSlug, orderId: urlOrderId } = useParams();
+    const { isCustomDomain } = useMerchant();
     const { orderId: stateOrderId, orderData } = location.state || {};
-    const basePath = `/s/${merchantSlug}`;
+    const basePath = isCustomDomain ? '' : `/s/${merchantSlug}`;
     const orderId = stateOrderId || urlOrderId;
 
     useEffect(() => {

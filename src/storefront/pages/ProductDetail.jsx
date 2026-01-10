@@ -3,10 +3,12 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Star, Truck, ShieldCheck, ArrowLeft, Minus, Plus, Package, Loader2, Heart, Share2 } from 'lucide-react';
 import { useMerchantProduct } from '../hooks/useMerchantProducts';
 import { useCart } from '../../context/cartcontext';
+import { useMerchant } from '../context/MerchantContext';
 
 export default function ProductDetail() {
     const { merchantSlug, productId } = useParams();
     const navigate = useNavigate();
+    const { isCustomDomain } = useMerchant();
     const { product, loading } = useMerchantProduct(productId);
     const { addToCart } = useCart();
 
@@ -15,7 +17,7 @@ export default function ProductDetail() {
     const [isFavorite, setIsFavorite] = useState(false);
 
     // Base path for this merchant's storefront
-    const basePath = `/s/${merchantSlug}`;
+    const basePath = isCustomDomain ? '' : `/s/${merchantSlug}`;
 
     // Helper to extract actual URL from nested objects or return string as-is
     const getImageUrl = (imageItem) => {
