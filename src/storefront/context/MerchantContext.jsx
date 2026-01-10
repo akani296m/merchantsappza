@@ -10,8 +10,12 @@ const MerchantContext = createContext();
 const ADMIN_DOMAINS = [
     'merchants.io',
     'www.merchants.io',
+    'soldt.co.za',           // Production admin domain
+    'www.soldt.co.za',       // Production admin domain with www
+    'admin.soldt.co.za',     // Production admin subdomain
     'localhost',
-    'localhost:5173', // Vite dev server
+    'localhost:5173',        // Vite dev server
+    'localhost:5174',        // Vite dev server (alternate port)
 ];
 
 /**
