@@ -17,6 +17,7 @@ import Onboarding from './pages/onboarding';
 import Login from './pages/login';
 import Signup from './pages/signup';
 import FacebookMarketing from './pages/marketing/Facebook';
+import Pages from './pages/store/Pages';
 
 // Settings Pages
 import {
@@ -27,6 +28,7 @@ import {
   OrdersNotificationsSettings,
   ShippingSettings,
   TaxesSettings,
+  DangerZoneSettings,
 } from './pages/settings';
 
 // Storefront Editor
@@ -172,6 +174,36 @@ export default function App() {
       } />
 
       {/* =========================================== */}
+      {/* STORE PREVIEW (Protected + Merchant)       */}
+      {/* =========================================== */}
+      <Route path="/store" element={
+        <ProtectedRoute>
+          <RequireMerchant>
+            <StorefrontLayout />
+          </RequireMerchant>
+        </ProtectedRoute>
+      }>
+        {/* Store preview routes - same as storefront but for logged-in merchant */}
+        <Route index element={<StoreHome />} />
+        <Route path="products" element={<Catalog />} />
+        <Route path="product/:productId" element={<ProductDetail />} />
+        <Route path="cart" element={<Cart />} />
+        <Route path="checkout" element={<Checkout />} />
+        <Route path="order-confirmation/:orderId" element={<OrderConfirmation />} />
+      </Route>
+
+      {/* =========================================== */}
+      {/* PAGES MANAGEMENT (Protected + Merchant)    */}
+      {/* =========================================== */}
+      <Route path="/store/pages" element={
+        <ProtectedRoute>
+          <RequireMerchant>
+            <Pages />
+          </RequireMerchant>
+        </ProtectedRoute>
+      } />
+
+      {/* =========================================== */}
       {/* SETTINGS ROUTES (Protected, Custom Layout)*/}
       {/* =========================================== */}
       <Route path="/settings" element={
@@ -187,6 +219,7 @@ export default function App() {
         <Route path="orders-notifications" element={<OrdersNotificationsSettings />} />
         <Route path="shipping" element={<ShippingSettings />} />
         <Route path="taxes" element={<TaxesSettings />} />
+        <Route path="danger-zone" element={<DangerZoneSettings />} />
         {/* Default redirect to general settings */}
         <Route index element={<GeneralSettings />} />
       </Route>

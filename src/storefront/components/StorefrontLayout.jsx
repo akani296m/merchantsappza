@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useParams } from 'react-router-dom';
-import { ShoppingCart, Search, Loader2 } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import { useCart } from '../../context/cartcontext';
 import { MerchantProvider, useMerchant } from '../context/MerchantContext';
 import StorefrontNotFound from './StorefrontNotFound';
@@ -63,7 +63,7 @@ function StorefrontLayoutInner() {
                     <div className="flex items-center space-x-6">
                         <button className="hover:text-gray-500"><Search size={20} /></button>
                         <Link to={`${basePath}/cart`} className="hover:text-gray-500 relative">
-                            <ShoppingCart size={20} />
+                            <img src="/assets/icons/cart.svg" alt="Cart" className="w-5 h-5" />
                             {/* Dynamic Cart Badge */}
                             {cartCount > 0 && (
                                 <span className="absolute -top-2 -right-2 w-5 h-5 bg-black text-white text-xs font-bold rounded-full flex items-center justify-center">

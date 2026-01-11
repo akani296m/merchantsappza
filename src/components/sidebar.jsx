@@ -1,73 +1,98 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home, ShoppingBag, Tag, User, Target, Badge, Image, Globe,
-  Building, BarChart3, Settings, ChevronRight, ChevronDown, Store, Plus, PlusCircle, Menu, X, LogOut, Loader2, Megaphone
+  Home, Package, DollarSign, Users, FileText, Store as StoreIcon,
+  ChevronDown, ChevronUp, Settings, Sliders, Trophy, Menu, X, PanelLeftClose,
+  Grid2X2
 } from 'lucide-react';
 import { useAuth } from '../context/authContext';
+
+// Custom Cart Icon component to match lucide-react icon API
+const CartIcon = ({ size = 20, strokeWidth, fill, ...props }) => (
+  <img
+    src="/assets/icons/cart.svg"
+    alt="Cart"
+    style={{ width: `${size}px`, height: `${size}px` }}
+    {...props}
+  />
+);
+
 
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
-  const [expandedMenus, setExpandedMenus] = useState({});
+  const [expandedMenus, setExpandedMenus] = useState({ orders: false, 'edit my store': false });
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
 
-  // Handle logout
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    await signOut();
-    navigate('/login');
-  };
-
-  // Get user initials for avatar
-  const getUserInitials = () => {
-    if (!user?.email) return 'A';
-    return user.email.charAt(0).toUpperCase();
-  };
-
-  // Define your main navigation items
-  const navItems = [
-    { name: 'Home', icon: Home, path: '/' },
-    { name: 'Orders', icon: ShoppingBag, path: '/orders' },
-    { name: 'Products', icon: Tag, path: '/products' },
-    { name: 'Add Product', icon: PlusCircle, path: '/products/create' },
-    { name: 'Customers', icon: User, path: '/customers' },
-    {
-      name: 'Marketing',
-      icon: Megaphone,
-      path: '/marketing', // This path acts as an ID for expansion
-      children: [
-        { name: 'Email', path: '/marketing/email' },
-        { name: 'Facebook', path: '/marketing/facebook' },
-        { name: 'TikTok', path: '/marketing/tiktok' },
-      ]
-    },
-    { name: 'Analytics', icon: BarChart3, path: '/analytics' },
-  ];
-
-  const toggleSubmenu = (path) => {
+  const toggleSubmenu = (menuKey) => {
     setExpandedMenus(prev => ({
       ...prev,
-      [path]: !prev[path]
+      [menuKey]: !prev[menuKey]
     }));
   };
 
-  // A small internal component for the buttons to keep things clean
-  const NavItem = ({ name, icon: Icon, path, children, onClick }) => {
-    // Check if the current URL matches the path (or sub-paths) to highlight it
+  // Navigation sections
+  const homeNavItems = [
+    {
+      name: 'Home',
+      icon: Grid2X2,
+      path: '/',
+      iconStyle: 'filled' // Special flag for active item
+    },
+    {
+      name: 'Orders',
+      icon: CartIcon,
+      path: '/orders',
+      hasSubmenu: true,
+      children: [
+        { name: 'All Orders', path: '/orders' },
+        { name: 'Returns', path: '/orders/returns' },
+        { name: 'Order Tracking', path: '/orders/tracking' },
+      ]
+    },
+    { name: 'Products', icon: Package, path: '/products' },
+    { name: 'Sales', icon: DollarSign, path: '/sales' },
+    { name: 'Customers', icon: Users, path: '/customers' },
+    { name: 'Marketing', icon: FileText, path: '/marketing' },
+    { name: 'Analytics', icon: FileText, path: '/analytics' },
+  ];
+
+  const manageStoreItems = [
+    { name: 'Preview My Store', icon: StoreIcon, path: '/store' },
+    {
+      name: 'Edit My Store',
+      icon: Settings,
+      path: '/store/editor',
+      hasSubmenu: true,
+      children: [
+        { name: 'Theme Editor', path: '/store/editor' },
+        { name: 'Pages', path: '/store/pages' },
+      ]
+    },
+  ];
+
+  // Section Label Component
+  const SectionLabel = ({ children }) => (
+    <div className="mt-6 mb-3 px-0">
+      <span className="text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-wider">
+        {children}
+      </span>
+    </div>
+  );
+
+  // Nav Item Component
+  const NavItem = ({ name, icon: Icon, path, hasSubmenu, children, onClick }) => {
     const isMainActive = location.pathname === path;
     const isChildActive = children?.some(child => location.pathname === child.path);
-    const isActive = isMainActive || isChildActive;
-
-    // Check if this menu is expanded
-    const isExpanded = expandedMenus[path];
+    const isActive = isMainActive || (hasSubmenu && isChildActive);
+    const isExpanded = expandedMenus[name.toLowerCase()];
 
     const handleClick = () => {
-      if (children) {
-        toggleSubmenu(path);
+      if (hasSubmenu) {
+        toggleSubmenu(name.toLowerCase());
       } else {
         navigate(path);
         if (onClick) onClick();
@@ -78,25 +103,29 @@ export default function Sidebar() {
       <div className="w-full">
         <button
           onClick={handleClick}
-          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-[10px] transition-colors ${isActive && !children // Only highlight main if it's a direct link or if we assume parent highlights with child (design choice)
-              ? 'bg-white text-[#303030] font-medium shadow-sm'
-              : 'text-[#303030] hover:bg-[#ECECEC]'
+          className={`w-full h-10 flex items-center justify-between px-3 rounded-lg transition-all ${isActive && name === 'Home'
+            ? 'bg-white text-[#111827] shadow-sm'
+            : 'bg-transparent text-[#111827] hover:bg-gray-100'
             }`}
         >
           <div className="flex items-center gap-3">
-            <Icon size={20} strokeWidth={2} />
-            <span className="text-[15px] font-medium">{name}</span>
+            <Icon
+              size={20}
+              strokeWidth={1.5}
+              fill={isActive && name === 'Home' ? '#111827' : 'none'}
+            />
+            <span className="text-[14px] font-medium">{name}</span>
           </div>
-          {children && (
-            isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />
+          {hasSubmenu && (
+            isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />
           )}
         </button>
 
-        {/* Sub-menu items */}
+        {/* Sub-menu items with tree view */}
         {children && isExpanded && (
-          <div className="mt-1 ml-4 space-y-1">
+          <div className="mt-1 ml-6 pl-3 border-l border-gray-300 space-y-1">
             {children.map((child) => {
-              const isChildActive = location.pathname === child.path;
+              const isChildItemActive = location.pathname === child.path;
               return (
                 <button
                   key={child.path}
@@ -104,12 +133,12 @@ export default function Sidebar() {
                     navigate(child.path);
                     if (onClick) onClick();
                   }}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-[8px] transition-colors ${isChildActive
-                      ? 'bg-white text-[#303030] font-medium shadow-sm'
-                      : 'text-[#6D6D6D] hover:bg-[#ECECEC]'
+                  className={`w-full flex items-center px-3 py-2 rounded-md transition-colors text-left ${isChildItemActive
+                    ? 'text-[#111827] font-medium'
+                    : 'text-[#6B7280] hover:text-[#111827] hover:bg-gray-50'
                     }`}
                 >
-                  <span className="text-[14px]">{child.name}</span>
+                  <span className="text-[13px]">{child.name}</span>
                 </button>
               );
             })}
@@ -119,16 +148,9 @@ export default function Sidebar() {
     );
   };
 
-  const SectionLabel = ({ children }) => (
-    <div className="flex items-center justify-between mt-5 mb-2 px-3">
-      <span className="text-[13px] font-medium text-[#6D6D6D]">{children}</span>
-      <ChevronRight size={14} className="text-[#6D6D6D]" />
-    </div>
-  );
-
   return (
     <>
-      {/* Mobile Menu Button - Fixed position at top left */}
+      {/* Mobile Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg border border-gray-200 hover:bg-gray-50 transition"
@@ -147,63 +169,85 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <aside className={`
-        w-[270px] h-screen bg-[#F6F6F7] px-4 py-3 flex flex-col border-r border-[#E1E1E1]
+        w-[270px] h-screen bg-[#F3F4F6] p-6 flex flex-col
         fixed md:relative z-40
         transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
-        <nav className="flex-1 flex flex-col space-y-1 mt-12 md:mt-0 overflow-y-auto">
+        {/* Header & Brand Identity */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-2">
+            {/* Yellow Square Icon */}
+            <div className="w-8 h-8 bg-[#ffcd00] rounded-md"></div>
+            {/* SOLDT Text */}
+            <span className="text-[20px] font-bold text-[#111827]">SOLDT</span>
+          </div>
+          {/* Collapse Trigger */}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-1 hover:bg-gray-200 rounded transition-colors"
+            aria-label="Collapse sidebar"
+          >
+            <PanelLeftClose size={18} className="text-[#6B7280]" />
+          </button>
+        </div>
 
-          {/* Main Menu */}
-          {navItems.map((item) => (
-            <NavItem key={item.name} {...item} onClick={() => setIsOpen(false)} />
-          ))}
+        {/* Main Navigation */}
+        <nav className="flex-1 flex flex-col overflow-y-auto">
+          {/* HOME Section */}
+          <SectionLabel>HOME</SectionLabel>
+          <div className="space-y-1">
+            {homeNavItems.map((item) => (
+              <NavItem key={item.name} {...item} onClick={() => setIsOpen(false)} />
+            ))}
+          </div>
 
-          {/* Sales Channels Section */}
-          <SectionLabel>Manage My Store</SectionLabel>
-          <NavItem name="Online Store" icon={Store} path="/store" onClick={() => setIsOpen(false)} />
-          <NavItem name="Store Editor" icon={Image} path="/store/editor" onClick={() => setIsOpen(false)} />
-
-          {/* Apps Section */}
-          <SectionLabel>Apps</SectionLabel>
-          <NavItem name="Add" icon={Plus} path="/apps" onClick={() => setIsOpen(false)} />
-
+          {/* MANAGE MY STORE Section */}
+          <SectionLabel>MANAGE MY STORE</SectionLabel>
+          <div className="space-y-1">
+            {manageStoreItems.map((item) => (
+              <NavItem key={item.name} {...item} onClick={() => setIsOpen(false)} />
+            ))}
+          </div>
         </nav>
 
-        {/* Bottom Section: Settings & User Profile */}
-        <div className="mt-auto pt-4 space-y-3 border-t border-[#E1E1E1]">
+        {/* Footer / Utility Area */}
+        <div className="mt-auto space-y-3">
           {/* Settings */}
-          <NavItem name="Settings" icon={Settings} path="/settings" onClick={() => setIsOpen(false)} />
-
-          {/* User Profile & Logout */}
-          <div className="bg-white rounded-xl p-3 shadow-sm border border-[#E1E1E1]">
+          <button
+            onClick={() => navigate('/settings')}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+          >
             <div className="flex items-center gap-3">
-              {/* Avatar */}
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold text-sm shadow-md">
-                {getUserInitials()}
-              </div>
+              <Sliders size={20} strokeWidth={1.5} className="text-[#111827]" />
+              <span className="text-[14px] font-medium text-[#111827]">Settings</span>
+            </div>
+            <ChevronDown size={16} className="text-[#111827]" />
+          </button>
 
-              {/* User Info */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[#303030] truncate">
-                  {user?.email || 'Admin'}
-                </p>
-                <p className="text-xs text-[#6D6D6D]">Administrator</p>
-              </div>
+          {/* Premium Promo Card */}
+          <div className="bg-[#E5E7EB] rounded-2xl p-4 space-y-3">
+            {/* Trophy Icon */}
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+              <Trophy size={20} className="text-[#F59E0B]" />
             </div>
 
-            {/* Logout Button */}
-            <button
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="w-full mt-3 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
-            >
-              {loggingOut ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <LogOut size={16} />
-              )}
-              <span>{loggingOut ? 'Logging out...' : 'Sign Out'}</span>
+            {/* Headline */}
+            <div>
+              <div className="inline-block bg-blue-500 text-white text-[11px] font-semibold px-2 py-0.5 rounded-full mb-1">
+                Unlock
+              </div>
+              <span className="text-[14px] font-semibold text-[#111827]"> Full Features</span>
+            </div>
+
+            {/* Body Copy */}
+            <p className="text-[12px] text-[#6B7280]">
+              You are currently in <span className="font-medium">trial mode</span>.
+            </p>
+
+            {/* CTA Button */}
+            <button className="w-full bg-black text-white text-[14px] font-medium py-2.5 rounded-full hover:bg-gray-900 transition-colors">
+              Upgrade Now
             </button>
           </div>
         </div>

@@ -3,35 +3,22 @@ import {
     Monitor,
     Smartphone,
     Tablet,
-    ExternalLink,
-    ArrowRight,
-    Truck,
-    RefreshCw,
-    ShieldCheck,
-    Clock,
-    Heart,
-    Star,
-    Award,
-    Headphones,
-    Package
+    ExternalLink
 } from 'lucide-react';
-
-// Icon mapping for trust badges
-const ICON_MAP = {
-    Truck: Truck,
-    RefreshCw: RefreshCw,
-    ShieldCheck: ShieldCheck,
-    Clock: Clock,
-    Heart: Heart,
-    Star: Star,
-    Award: Award,
-    Headphones: Headphones
-};
+import SectionRenderer from '../../../components/storefront/SectionRenderer';
 
 /**
- * Live preview component that renders a mini version of StoreHome
+ * Live preview component that renders sections in real-time
+ * Uses the actual SectionRenderer for accurate preview
  */
-export default function LivePreview({ settings, merchantSlug }) {
+export default function LivePreview({
+    sections,
+    selectedSectionId,
+    onSelectSection,
+    merchantSlug,
+    products = [],
+    productsLoading = false
+}) {
     const [device, setDevice] = useState('desktop');
 
     const deviceWidths = {
@@ -40,7 +27,6 @@ export default function LivePreview({ settings, merchantSlug }) {
         mobile: 'w-[375px]'
     };
 
-    const storeName = 'Your Store';
     const basePath = `/s/${merchantSlug || 'preview'}`;
 
     return (
@@ -99,137 +85,47 @@ export default function LivePreview({ settings, merchantSlug }) {
                     className={`${deviceWidths[device]} bg-white rounded-lg shadow-xl overflow-hidden transition-all duration-300 origin-top`}
                     style={{
                         maxHeight: 'calc(100vh - 200px)',
-                        transform: device !== 'desktop' ? 'scale(0.9)' : 'scale(1)'
+                        transform: device !== 'desktop' ? 'scale(0.85)' : 'scale(1)'
                     }}
                 >
-                    {/* Mini Store Preview */}
+                    {/* Mini Store Preview with Navbar */}
                     <div className="overflow-y-auto max-h-[calc(100vh-220px)]">
 
                         {/* Nav Preview */}
                         <nav className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3">
                             <div className="flex items-center justify-between">
-                                {settings.logo_url ? (
-                                    <img src={settings.logo_url} alt="Logo" className="h-6 max-w-[100px] object-contain" />
-                                ) : (
-                                    <span className="font-bold text-sm">{storeName}</span>
-                                )}
+                                <span className="font-bold text-sm">Your Store</span>
                                 <div className="flex items-center gap-4 text-xs text-gray-500">
                                     <span>Home</span>
                                     <span>Catalog</span>
+                                    <span>Cart</span>
                                 </div>
                             </div>
                         </nav>
 
-                        {/* Hero Section Preview */}
-                        <section
-                            className="relative h-[200px] md:h-[300px] text-white overflow-hidden"
-                            style={{ backgroundColor: settings.primary_color || '#1a1a1a' }}
+                        {/* Sections Preview */}
+                        <div
+                            className="transform-gpu"
+                            style={{
+                                transform: device !== 'desktop' ? 'scale(0.8)' : 'scale(1)',
+                                transformOrigin: 'top center'
+                            }}
                         >
-                            {settings.hero_image_url && (
-                                <div className="absolute inset-0">
-                                    <img
-                                        src={settings.hero_image_url}
-                                        alt="Hero"
-                                        className="w-full h-full object-cover opacity-60"
-                                    />
-                                </div>
-                            )}
-                            <div className="relative h-full flex flex-col justify-center px-6">
-                                <span className="text-[10px] font-bold tracking-widest uppercase mb-2 text-gray-300">
-                                    New Collection 2024
-                                </span>
-                                <h1 className="text-xl md:text-2xl font-bold mb-2 leading-tight">
-                                    {settings.hero_title || 'Your Hero Title'}
-                                </h1>
-                                <p className="text-xs text-gray-200 mb-4 max-w-sm line-clamp-2">
-                                    {settings.hero_subtitle || 'Your hero subtitle goes here...'}
-                                </p>
-                                <button
-                                    className="self-start px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2"
-                                    style={{
-                                        backgroundColor: 'white',
-                                        color: settings.primary_color || '#000'
-                                    }}
-                                >
-                                    Shop Now <ArrowRight size={14} />
-                                </button>
-                            </div>
-                        </section>
-
-                        {/* Trending Section Preview */}
-                        <section className="py-8 px-6">
-                            <h2 className="text-lg font-bold mb-4">Trending Now</h2>
-                            <div className={`grid gap-4 ${device === 'mobile' ? 'grid-cols-2' : 'grid-cols-4'}`}>
-                                {[1, 2, 3, 4].map((i) => (
-                                    <div key={i} className="group">
-                                        <div className="aspect-[3/4] bg-gray-100 rounded mb-2 flex items-center justify-center">
-                                            <Package className="text-gray-300" size={24} />
-                                        </div>
-                                        <div className="h-3 bg-gray-200 rounded w-3/4 mb-1"></div>
-                                        <div className="h-3 bg-gray-100 rounded w-1/2"></div>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-
-                        {/* Email Capture Section Preview */}
-                        <section
-                            className="py-12 px-6 text-center text-white"
-                            style={{ backgroundColor: settings.primary_color || '#000' }}
-                        >
-                            <h2 className="text-lg font-bold mb-2">
-                                {settings.email_capture_title || 'Join the Movement'}
-                            </h2>
-                            <p className="text-xs text-gray-400 max-w-sm mx-auto mb-4 line-clamp-2">
-                                {settings.email_capture_subtitle || 'Sign up for our newsletter...'}
-                            </p>
-                            <div className="flex gap-2 justify-center max-w-xs mx-auto">
-                                <input
-                                    type="email"
-                                    placeholder="Email"
-                                    className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 text-white rounded text-xs"
-                                    disabled
-                                />
-                                <button
-                                    className="px-4 py-2 rounded text-xs font-bold"
-                                    style={{
-                                        backgroundColor: 'white',
-                                        color: settings.primary_color || '#000'
-                                    }}
-                                >
-                                    {settings.email_capture_button_text || 'Sign Up'}
-                                </button>
-                            </div>
-                        </section>
-
-                        {/* Trust Badges Section Preview */}
-                        <section className="py-8 px-6 border-b border-gray-100">
-                            <div className={`grid gap-4 text-center ${device === 'mobile' ? 'grid-cols-1' : 'grid-cols-3'}`}>
-                                {settings.trust_badges?.map((badge, index) => {
-                                    const IconComponent = ICON_MAP[badge.icon] || ShieldCheck;
-                                    return (
-                                        <div key={index} className="flex flex-col items-center">
-                                            <div
-                                                className="w-10 h-10 rounded-full flex items-center justify-center mb-2"
-                                                style={{ backgroundColor: `${settings.accent_color}20` }}
-                                            >
-                                                <IconComponent
-                                                    size={18}
-                                                    style={{ color: settings.accent_color || '#3b82f6' }}
-                                                />
-                                            </div>
-                                            <h4 className="text-xs font-bold">{badge.title}</h4>
-                                            <p className="text-[10px] text-gray-500">{badge.subtitle}</p>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </section>
+                            <SectionRenderer
+                                sections={sections}
+                                basePath={basePath}
+                                products={products}
+                                productsLoading={productsLoading}
+                                isEditing={true}
+                                selectedSectionId={selectedSectionId}
+                                onSectionClick={onSelectSection}
+                            />
+                        </div>
 
                         {/* Footer Preview */}
                         <footer className="bg-gray-50 py-6 px-6 text-center">
                             <p className="text-[10px] text-gray-400">
-                                © 2024 {storeName}. All rights reserved.
+                                © 2024 Your Store. All rights reserved.
                             </p>
                         </footer>
 

@@ -1,27 +1,116 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Plus, DollarSign, Building, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { ChevronRight, CheckCircle, AlertCircle, Eye, EyeOff, Building, DollarSign } from 'lucide-react';
 import { useAdminMerchant } from '../../context/adminMerchantContext';
 import { supabase } from '../../lib/supabase';
 
+// Payment Gateway Icons as SVG components
+const PaystackIcon = () => (
+    <svg viewBox="0 0 24 24" className="w-5 h-5">
+        <rect x="2" y="4" width="4" height="16" fill="#00C3F7" rx="1" />
+        <rect x="8" y="8" width="4" height="12" fill="#00C3F7" rx="1" />
+        <rect x="14" y="2" width="4" height="18" fill="#00C3F7" rx="1" />
+    </svg>
+);
+
+const PayfastIcon = () => (
+    <svg viewBox="0 0 24 24" className="w-5 h-5">
+        <text x="2" y="18" fontSize="14" fontWeight="bold" fill="#1A1A2E" fontFamily="Arial">Pf</text>
+    </svg>
+);
+
+const YocoIcon = () => (
+    <svg viewBox="0 0 24 24" className="w-5 h-5">
+        <path d="M4 12c0-4.4 3.6-8 8-8s8 3.6 8 8-3.6 8-8 8" stroke="#0066FF" strokeWidth="3" fill="none" strokeLinecap="round" />
+        <path d="M20 12c0 4.4-3.6 8-8 8s-8-3.6-8-8" stroke="#0066FF" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.5" />
+    </svg>
+);
+
+const PeachPaymentsIcon = () => (
+    <svg viewBox="0 0 24 24" className="w-5 h-5">
+        <path d="M4 6l8-2 8 2v12l-8 2-8-2V6z" fill="#1A1A2E" />
+        <path d="M6 8l6-1.5 6 1.5v8l-6 1.5-6-1.5V8z" fill="#00D4AA" />
+        <path d="M8 10l4-1 4 1v4l-4 1-4-1v-4z" fill="#FF6B9D" />
+    </svg>
+);
+
+const OzowIcon = () => (
+    <svg viewBox="0 0 24 24" className="w-5 h-5">
+        <path d="M4 4l16 16M20 4L4 20" stroke="#1A1A2E" strokeWidth="4" strokeLinecap="round" />
+    </svg>
+);
+
+// Gateway data configuration
+const PAYMENT_GATEWAYS = [
+    {
+        id: 'paystack',
+        name: 'Paystack',
+        icon: PaystackIcon,
+        description: 'Accept payments via cards, bank transfers, and mobile money',
+        keyField: 'paystack_public_key',
+        dashboardUrl: 'https://dashboard.paystack.com/#/settings/developers',
+        dashboardLabel: 'Paystack Dashboard → Settings → API Keys & Webhooks',
+    },
+    {
+        id: 'payfast',
+        name: 'Payfast',
+        icon: PayfastIcon,
+        description: 'South African payment gateway supporting multiple payment methods',
+        keyField: 'payfast_merchant_id',
+        dashboardUrl: 'https://www.payfast.co.za/dashboard',
+        dashboardLabel: 'Payfast Dashboard → Settings → Integration',
+    },
+    {
+        id: 'yoco',
+        name: 'Yoco',
+        icon: YocoIcon,
+        description: 'Accept card payments with competitive rates',
+        keyField: 'yoco_public_key',
+        dashboardUrl: 'https://portal.yoco.com/',
+        dashboardLabel: 'Yoco Portal → API Keys',
+    },
+    {
+        id: 'peach_payments',
+        name: 'Peach Payments',
+        icon: PeachPaymentsIcon,
+        description: 'Enterprise-grade payment processing for Africa',
+        keyField: 'peach_entity_id',
+        dashboardUrl: 'https://dashboard.peachpayments.com/',
+        dashboardLabel: 'Peach Dashboard → Settings → API Configuration',
+    },
+    {
+        id: 'ozow',
+        name: 'Ozow',
+        icon: OzowIcon,
+        description: 'Instant EFT payments directly from customer bank accounts',
+        keyField: 'ozow_site_code',
+        dashboardUrl: 'https://ozow.com/merchant',
+        dashboardLabel: 'Ozow Merchant Portal → API Settings',
+    },
+];
+
 export default function FinanceSettings() {
     const { merchant, refetch } = useAdminMerchant();
-    const [paystackPublicKey, setPaystackPublicKey] = useState('');
-    const [showKey, setShowKey] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [saveStatus, setSaveStatus] = useState(null); // 'success' | 'error' | null
+    const [expandedGateway, setExpandedGateway] = useState(null);
+    const [gatewayKeys, setGatewayKeys] = useState({});
+    const [showKeys, setShowKeys] = useState({});
+    const [saving, setSaving] = useState({});
+    const [saveStatus, setSaveStatus] = useState({});
 
-    // Load existing Paystack key when merchant data loads
+    // Load existing gateway keys when merchant data loads
     useEffect(() => {
-        const fetchPaystackKey = async () => {
+        const fetchGatewayKeys = async () => {
             if (!merchant?.id) return;
 
-            // First, try to use data from context
-            if (merchant.paystack_public_key) {
-                setPaystackPublicKey(merchant.paystack_public_key);
-                return;
-            }
+            // Initialize from merchant context
+            const keys = {};
+            PAYMENT_GATEWAYS.forEach(gateway => {
+                if (merchant[gateway.keyField]) {
+                    keys[gateway.id] = merchant[gateway.keyField];
+                }
+            });
+            setGatewayKeys(keys);
 
-            // Fallback: fetch directly if not in context
+            // Fetch keys from database if not in context
             try {
                 const { data, error } = await supabase
                     .from('merchants')
@@ -29,216 +118,286 @@ export default function FinanceSettings() {
                     .eq('id', merchant.id)
                     .single();
 
-                if (!error && data?.paystack_public_key) {
-                    setPaystackPublicKey(data.paystack_public_key);
+                if (!error && data) {
+                    if (data.paystack_public_key) {
+                        setGatewayKeys(prev => ({ ...prev, paystack: data.paystack_public_key }));
+                    }
                 }
             } catch (err) {
-                console.error('Error fetching Paystack key:', err);
+                console.error('Error fetching gateway keys:', err);
             }
         };
 
-        fetchPaystackKey();
+        fetchGatewayKeys();
     }, [merchant?.id, merchant?.paystack_public_key]);
 
-    const handleSavePaystack = async () => {
+    const handleSaveGateway = async (gatewayId, keyField) => {
         if (!merchant?.id) {
-            setSaveStatus('error');
+            setSaveStatus(prev => ({ ...prev, [gatewayId]: 'error' }));
             return;
         }
 
-        setSaving(true);
-        setSaveStatus(null);
+        setSaving(prev => ({ ...prev, [gatewayId]: true }));
+        setSaveStatus(prev => ({ ...prev, [gatewayId]: null }));
 
         try {
+            const updateData = {};
+            updateData[keyField] = gatewayKeys[gatewayId]?.trim() || null;
+
             const { error } = await supabase
                 .from('merchants')
-                .update({ paystack_public_key: paystackPublicKey.trim() || null })
+                .update(updateData)
                 .eq('id', merchant.id);
 
             if (error) throw error;
 
-            setSaveStatus('success');
-            refetch(); // Refresh merchant data
+            setSaveStatus(prev => ({ ...prev, [gatewayId]: 'success' }));
+            refetch();
 
-            // Clear success message after 3 seconds
-            setTimeout(() => setSaveStatus(null), 3000);
+            setTimeout(() => setSaveStatus(prev => ({ ...prev, [gatewayId]: null })), 3000);
         } catch (error) {
-            console.error('Error saving Paystack key:', error);
-            setSaveStatus('error');
+            console.error(`Error saving ${gatewayId} configuration:`, error);
+            setSaveStatus(prev => ({ ...prev, [gatewayId]: 'error' }));
         } finally {
-            setSaving(false);
+            setSaving(prev => ({ ...prev, [gatewayId]: false }));
         }
     };
 
-    const isPaystackConnected = paystackPublicKey && paystackPublicKey.trim().length > 0;
+    const isGatewayActive = (gatewayId) => {
+        return gatewayKeys[gatewayId] && gatewayKeys[gatewayId].trim().length > 0;
+    };
 
-    return (
-        <div className="max-w-4xl space-y-6">
-            {/* Payment Gateway Configuration */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                <div className="px-6 py-5 border-b border-gray-200">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-50 rounded-lg">
-                            <CreditCard size={24} className="text-green-600" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-semibold text-gray-900">Payment Gateway</h2>
-                            <p className="text-sm text-gray-500 mt-0.5">
-                                Configure how you accept payments from customers
-                            </p>
-                        </div>
-                    </div>
+    const toggleExpanded = (gatewayId) => {
+        setExpandedGateway(expandedGateway === gatewayId ? null : gatewayId);
+    };
+
+    const renderGatewayContent = (gateway) => {
+        const isActive = isGatewayActive(gateway.id);
+
+        return (
+            <div className="px-6 py-5 bg-gray-50 border-t border-gray-100">
+                <div className="flex items-center gap-2 mb-4">
+                    <h3 className="font-semibold text-gray-900">{gateway.name}</h3>
+                    {isActive && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                            <CheckCircle size={12} />
+                            Connected
+                        </span>
+                    )}
                 </div>
 
-                <div className="p-6">
-                    {/* Paystack Integration */}
-                    <div className="border-2 border-gray-200 rounded-lg p-6">
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
-                                    <CreditCard className="text-white" size={24} />
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                                        Paystack
-                                        {isPaystackConnected && (
-                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                                                <CheckCircle size={12} />
-                                                Connected
-                                            </span>
-                                        )}
-                                    </h3>
-                                    <p className="text-sm text-gray-500">Accept payments via cards, bank transfers, and mobile money</p>
-                                </div>
-                            </div>
+                <p className="text-sm text-gray-600 mb-4">{gateway.description}</p>
+
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {gateway.name} Public Key
+                        </label>
+                        <div className="relative">
+                            <input
+                                type={showKeys[gateway.id] ? 'text' : 'password'}
+                                value={gatewayKeys[gateway.id] || ''}
+                                onChange={(e) => setGatewayKeys(prev => ({ ...prev, [gateway.id]: e.target.value }))}
+                                className="w-full px-4 py-2.5 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm bg-white"
+                                placeholder="pk_test_xxxxxxxxxxxxxxxxxxxxxxxx"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowKeys(prev => ({ ...prev, [gateway.id]: !prev[gateway.id] }))}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                {showKeys[gateway.id] ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
                         </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Paystack Public Key
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type={showKey ? 'text' : 'password'}
-                                        value={paystackPublicKey}
-                                        onChange={(e) => setPaystackPublicKey(e.target.value)}
-                                        className="w-full px-4 py-2.5 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                                        placeholder="pk_test_xxxxxxxxxxxxxxxxxxxxxxxx"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowKey(!showKey)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                    >
-                                        {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
-                                    </button>
-                                </div>
-                                <p className="text-xs text-gray-500 mt-1.5">
-                                    Get your public key from your{' '}
-                                    <a
-                                        href="https://dashboard.paystack.com/#/settings/developers"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-600 hover:text-blue-700 font-medium"
-                                    >
-                                        Paystack Dashboard → Settings → API Keys & Webhooks
-                                    </a>
-                                </p>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={handleSavePaystack}
-                                    disabled={saving}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
-                                >
-                                    {saving ? (
-                                        <>
-                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                            Saving...
-                                        </>
-                                    ) : (
-                                        'Save Configuration'
-                                    )}
-                                </button>
-
-                                {saveStatus === 'success' && (
-                                    <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
-                                        <CheckCircle size={16} />
-                                        Saved successfully!
-                                    </div>
-                                )}
-
-                                {saveStatus === 'error' && (
-                                    <div className="flex items-center gap-2 text-red-600 text-sm font-medium">
-                                        <AlertCircle size={16} />
-                                        Failed to save
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                <div className="flex items-start gap-3">
-                                    <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={18} />
-                                    <div className="text-sm text-blue-800">
-                                        <p className="font-medium mb-1">Important Security Note:</p>
-                                        <ul className="list-disc list-inside space-y-1 text-blue-700">
-                                            <li>Only use your <strong>Public Key</strong> (starts with <code className="bg-blue-100 px-1 rounded">pk_</code>)</li>
-                                            <li>Never use your Secret Key in this field</li>
-                                            <li>The public key is safe to use in your storefront checkout</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <p className="text-xs text-gray-500 mt-1.5">
+                            Get your public key from your{' '}
+                            <a
+                                href={gateway.dashboardUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-700 font-medium"
+                            >
+                                {gateway.dashboardLabel}
+                            </a>
+                        </p>
                     </div>
 
-                    {/* Other Payment Providers (Coming Soon) */}
-                    <div className="mt-6">
-                        <h4 className="text-sm font-medium text-gray-700 mb-3">Other Payment Providers</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 opacity-50 cursor-not-allowed">
-                                <div className="text-center">
-                                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                        <CreditCard className="text-purple-600" size={24} />
-                                    </div>
-                                    <h3 className="font-medium text-gray-900 mb-1">Stripe</h3>
-                                    <p className="text-sm text-gray-500">Coming Soon</p>
-                                </div>
-                            </div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => handleSaveGateway(gateway.id, gateway.keyField)}
+                            disabled={saving[gateway.id]}
+                            className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+                        >
+                            {saving[gateway.id] ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    Saving...
+                                </>
+                            ) : (
+                                'Save Configuration'
+                            )}
+                        </button>
 
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 opacity-50 cursor-not-allowed">
-                                <div className="text-center">
-                                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                        <CreditCard className="text-blue-600" size={24} />
-                                    </div>
-                                    <h3 className="font-medium text-gray-900 mb-1">PayPal</h3>
-                                    <p className="text-sm text-gray-500">Coming Soon</p>
-                                </div>
+                        {saveStatus[gateway.id] === 'success' && (
+                            <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
+                                <CheckCircle size={16} />
+                                Saved successfully!
+                            </div>
+                        )}
+
+                        {saveStatus[gateway.id] === 'error' && (
+                            <div className="flex items-center gap-2 text-red-600 text-sm font-medium">
+                                <AlertCircle size={16} />
+                                Failed to save
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                            <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={18} />
+                            <div className="text-sm text-blue-800">
+                                <p className="font-medium mb-1">Important Security Note:</p>
+                                <ul className="list-disc list-inside space-y-1 text-blue-700">
+                                    <li>Only use your <strong>Public Key</strong> (starts with <code className="bg-blue-100 px-1 rounded">pk_</code>)</li>
+                                    <li>Never use your Secret Key in this field</li>
+                                    <li>The public key is safe to use in your storefront checkout</li>
+                                </ul>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+        );
+    };
 
-            {/* Billing Information */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                <div className="px-6 py-5 border-b border-gray-200">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-50 rounded-lg">
-                            <Building size={24} className="text-blue-600" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-semibold text-gray-900">Billing Information</h2>
-                            <p className="text-sm text-gray-500 mt-0.5">
-                                Your billing details for subscription and fees
-                            </p>
-                        </div>
-                    </div>
+    return (
+        <div className="max-w-4xl space-y-8" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+            {/* Payment Gateway Section */}
+            <div>
+                {/* Headline - Outside the card */}
+                <h2 className="text-xl font-semibold text-gray-900 mb-5" style={{ color: '#111827', fontWeight: 600 }}>
+                    Payment Gateway
+                </h2>
+
+                {/* Card Container */}
+                <div
+                    className="bg-white rounded-2xl border overflow-hidden"
+                    style={{
+                        borderRadius: '16px',
+                        borderColor: '#E5E7EB',
+                        borderWidth: '1px',
+                        borderStyle: 'solid'
+                    }}
+                >
+                    {PAYMENT_GATEWAYS.map((gateway, index) => {
+                        const Icon = gateway.icon;
+                        const isActive = isGatewayActive(gateway.id);
+                        const isExpanded = expandedGateway === gateway.id;
+                        const isLast = index === PAYMENT_GATEWAYS.length - 1;
+
+                        return (
+                            <div key={gateway.id}>
+                                {/* List Item Row */}
+                                <div
+                                    onClick={() => toggleExpanded(gateway.id)}
+                                    className="flex items-center justify-between px-5 py-4 cursor-pointer transition-colors hover:bg-gray-50"
+                                    style={{ padding: '16px 20px' }}
+                                >
+                                    {/* Left Side: Icon + Text */}
+                                    <div className="flex items-center gap-4">
+                                        {/* Brand Icon Container */}
+                                        <div
+                                            className="flex items-center justify-center"
+                                            style={{
+                                                width: '44px',
+                                                height: '44px',
+                                                backgroundColor: '#F3F4F6',
+                                                borderRadius: '10px',
+                                            }}
+                                        >
+                                            <Icon />
+                                        </div>
+
+                                        {/* Text Block */}
+                                        <div className="flex flex-col">
+                                            <span
+                                                className="font-medium"
+                                                style={{
+                                                    fontSize: '16px',
+                                                    fontWeight: 500,
+                                                    color: '#1F2937',
+                                                    lineHeight: '1.4'
+                                                }}
+                                            >
+                                                {gateway.name}
+                                            </span>
+                                            <span
+                                                className="flex items-center gap-1.5"
+                                                style={{
+                                                    fontSize: '14px',
+                                                    fontWeight: 400,
+                                                    color: '#6B7280',
+                                                    lineHeight: '1.4'
+                                                }}
+                                            >
+                                                <span
+                                                    style={{
+                                                        color: isActive ? '#50C878' : '#D1D5DB',
+                                                        fontSize: '10px'
+                                                    }}
+                                                >
+                                                    ●
+                                                </span>
+                                                Gateway is {isActive ? 'active' : 'inactive'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Right Side: Chevron */}
+                                    <ChevronRight
+                                        size={20}
+                                        className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                                        style={{ color: '#9CA3AF' }}
+                                    />
+                                </div>
+
+                                {/* Expanded Content */}
+                                {isExpanded && renderGatewayContent(gateway)}
+
+                                {/* Divider - Only between items, not after last */}
+                                {!isLast && (
+                                    <div
+                                        style={{
+                                            height: '1px',
+                                            backgroundColor: '#F3F4F6',
+                                            marginLeft: '20px',
+                                            marginRight: '20px'
+                                        }}
+                                    />
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
+            </div>
 
-                <div className="p-6">
+            {/* Billing Information Section */}
+            <div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-5" style={{ color: '#111827', fontWeight: 600 }}>
+                    Billing Information
+                </h2>
+
+                <div
+                    className="bg-white rounded-2xl border"
+                    style={{
+                        borderRadius: '16px',
+                        borderColor: '#E5E7EB',
+                        borderWidth: '1px',
+                        borderStyle: 'solid',
+                        padding: '20px'
+                    }}
+                >
                     <div className="space-y-4">
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                             <div className="flex items-start gap-3">
@@ -248,7 +407,7 @@ export default function FinanceSettings() {
                                     <p className="text-sm text-blue-700">
                                         You're currently on a free trial. Upgrade to unlock premium features.
                                     </p>
-                                    <button className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                                    <button className="mt-3 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium">
                                         View Plans
                                     </button>
                                 </div>

@@ -9,7 +9,8 @@ import {
     Truck,
     Receipt,
     ChevronLeft,
-    ArrowLeft
+    ArrowLeft,
+    AlertTriangle
 } from 'lucide-react';
 
 export default function SettingsLayout() {
@@ -52,6 +53,12 @@ export default function SettingsLayout() {
             path: '/settings/taxes',
             icon: Receipt,
             description: 'Tax rates and collection settings'
+        },
+        {
+            name: 'Danger Zone',
+            path: '/settings/danger-zone',
+            icon: AlertTriangle,
+            description: 'Pause or delete your store'
         },
     ];
 

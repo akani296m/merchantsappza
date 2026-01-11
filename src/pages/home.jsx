@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { TrendingUp, Package, Edit2, ShoppingBag, ChevronRight, Clock } from 'lucide-react';
+import { TrendingUp, Package, Edit2, ShoppingBag, ChevronRight, Clock, BarChart3 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAdminMerchant } from '../context/adminMerchantContext';
 
@@ -136,7 +136,7 @@ export default function Home() {
           const daysAgo = Math.floor((new Date() - date) / (1000 * 60 * 60 * 24));
           key = daysAgo === 0 ? 'Today' : `${7 - daysAgo}d ago`;
           break;
-        case 'This Month':
+        case 'Month':
           // Group by week
           const weeksAgo = Math.floor((new Date() - date) / (1000 * 60 * 60 * 24 * 7));
           key = `Week ${4 - weeksAgo}`;
@@ -155,36 +155,38 @@ export default function Home() {
       groupedData[key] += order.total || 0;
     });
 
-    // Convert to array format for chart
-    return Object.entries(groupedData).map(([time, revenue]) => ({
-      time,
-      revenue
-    }));
+    // Convert to array format for stacked bar chart (split revenue into two segments)
+    return Object.entries(groupedData).map(([time, totalRevenue]) => {
+      // Split revenue into two segments (60% and 40% for visual effect)
+      const segment1 = totalRevenue * 0.6;
+      const segment2 = totalRevenue * 0.4;
+      return {
+        time,
+        revenue1: segment1,
+        revenue2: segment2,
+        total: totalRevenue
+      };
+    });
   };
 
   // Helper to provide empty data structure when no orders
   const getEmptyDataForRange = (range) => {
+    const createDataPoint = (time) => ({
+      time,
+      revenue1: 0,
+      revenue2: 0,
+      total: 0
+    });
+
     switch (range) {
       case 'Today':
-        return Array.from({ length: 24 }, (_, i) => ({
-          time: `${i}:00`,
-          revenue: 0
-        }));
+        return Array.from({ length: 24 }, (_, i) => createDataPoint(`${i}:00`));
       case 'This Week':
-        return ['6d ago', '5d ago', '4d ago', '3d ago', '2d ago', '1d ago', 'Today'].map(day => ({
-          time: day,
-          revenue: 0
-        }));
-      case 'This Month':
-        return ['Week 1', 'Week 2', 'Week 3', 'Week 4'].map(week => ({
-          time: week,
-          revenue: 0
-        }));
+        return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => createDataPoint(day));
+      case 'Month':
+        return ['Week 1', 'Week 2', 'Week 3', 'Week 4'].map(week => createDataPoint(week));
       case 'Year to Date':
-        return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(month => ({
-          time: month,
-          revenue: 0
-        }));
+        return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'].map(month => createDataPoint(month));
       default:
         return [];
     }
@@ -250,132 +252,146 @@ export default function Home() {
       {/* Header */}
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
 
-      {/* Revenue Analytics Card */}
+      {/* Sales Analytics Card */}
       <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            {/* MODIFIED: Flex container to hold Title and Dropdown side-by-side */}
-            <div className="flex items-center gap-2 mb-2">
-              <h2 className="text-gray-600 text-sm font-medium">Total Revenue</h2>
-              <select
-                value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value)}
-                className="text-sm bg-gray-50 border border-gray-200 rounded px-2 py-0.5 text-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer"
-              >
-                <option value="This Week">This Week</option>
-                <option value="This Month">This Month</option>
-                <option value="Today">Today</option>
-                <option value="Year to Date">Year to Date</option>
-              </select>
-            </div>
+        {/* Header with Title and Segmented Control */}
+        <div className="flex items-center justify-between mb-8">
+          {/* Title with Icon */}
+          <div className="flex items-center gap-2">
+            <BarChart3 size={20} className="text-[#111827]" />
+            <h2 className="text-[16px] font-semibold text-[#111827]">Sales</h2>
+          </div>
 
-            <div className="flex items-center gap-3">
-              {loadingRevenue ? (
-                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <>
-                  <span className="text-4xl font-bold text-gray-900">
-                    {formatCurrency(totalRevenue)}
-                  </span>
-                  {totalRevenue > 0 && (
-                    <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full">
-                      <TrendingUp size={16} />
-                      <span className="text-sm font-semibold">+12.5%</span>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+          {/* Segmented Control Filter */}
+          <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
+            {['Today', 'This Week', 'Month', 'Year to Date'].map((option) => (
+              <button
+                key={option}
+                onClick={() => setTimeRange(option)}
+                className={`px-3 py-1.5 text-[13px] font-medium rounded-md transition-all ${timeRange === option
+                  ? 'bg-white text-[#111827] shadow-sm'
+                  : 'text-[#9CA3AF] hover:text-[#6B7280]'
+                  }`}
+              >
+                {option}
+              </button>
+            ))}
           </div>
         </div>
 
         {/* CHART */}
         {loadingRevenue ? (
-          <div className="flex items-center justify-center" style={{ height: 300 }}>
+          <div className="flex items-center justify-center" style={{ height: 400 }}>
             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : revenueData.length === 0 ? (
-          <div className="flex items-center justify-center flex-col" style={{ height: 300 }}>
+          <div className="flex items-center justify-center flex-col" style={{ height: 400 }}>
             <TrendingUp className="text-gray-300 mb-3" size={48} />
             <p className="text-gray-500">No revenue data available for this period</p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={revenueData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <ResponsiveContainer width="100%" height={400}>
+            <BarChart
+              data={revenueData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              barCategoryGap="20%"
+            >
+              {/* Gridlines - faint dashed horizontal lines */}
+              <CartesianGrid
+                strokeDasharray="5 5"
+                stroke="#E5E7EB"
+                vertical={false}
+              />
+
+              {/* X-Axis */}
               <XAxis
                 dataKey="time"
-                stroke="#9ca3af"
-                style={{ fontSize: '12px' }}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                dy={10}
               />
+
+              {/* Y-Axis */}
               <YAxis
-                stroke="#9ca3af"
-                style={{ fontSize: '12px' }}
-                tickFormatter={(value) => `${value / 1000}k`}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: '#9CA3AF', fontSize: 12, textAnchor: 'end' }}
+                tickFormatter={(value) => {
+                  if (value >= 1000) return `${value / 1000}K`;
+                  return value;
+                }}
+                ticks={[0, 10000, 50000, 100000, 130000, 150000]}
+                domain={[0, 150000]}
               />
+
+              {/* Tooltip */}
               <Tooltip
-                formatter={(value) => formatCurrency(value)}
-                contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px'
+                cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const total = payload[0].payload.total;
+                    return (
+                      <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {formatCurrency(total)}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {payload[0].payload.time}
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
                 }}
               />
-              <Line
-                type="monotone"
-                dataKey="revenue"
-                stroke="#3b82f6"
-                strokeWidth={3}
-                dot={{ fill: '#3b82f6', r: 4 }}
-                activeDot={{ r: 6 }}
+
+              {/* Stacked Bars with gradients and rounded tops */}
+              <defs>
+                <linearGradient id="colorRevenue1" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#8B5CF6" stopOpacity={1} />
+                  <stop offset="100%" stopColor="#A78BFA" stopOpacity={1} />
+                </linearGradient>
+                <linearGradient id="colorRevenue2" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#EC4899" stopOpacity={1} />
+                  <stop offset="100%" stopColor="#F472B6" stopOpacity={1} />
+                </linearGradient>
+              </defs>
+
+              {/* Bottom segment of the bar */}
+              <Bar
+                dataKey="revenue1"
+                stackId="a"
+                fill="url(#colorRevenue1)"
+                radius={[0, 0, 0, 0]}
+                maxBarSize={32}
               />
-            </LineChart>
+
+              {/* Top segment of the bar with rounded top */}
+              <Bar
+                dataKey="revenue2"
+                stackId="a"
+                fill="url(#colorRevenue2)"
+                radius={[8, 8, 0, 0]}
+                maxBarSize={32}
+              />
+            </BarChart>
           </ResponsiveContainer>
         )}
       </div>
 
-      {/* Two Column Layout: Best Sellers & Recent Orders */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Best Sellers Card */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <Package className="text-blue-500" size={24} />
-            <h3 className="text-xl font-bold text-gray-900">Best Sellers</h3>
-          </div>
-          <div className="space-y-3">
-            {bestSellers.map((product) => (
-              <div
-                key={product.id}
-                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center text-2xl">
-                    {product.icon}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">{product.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {product.unitsSold.toLocaleString()} units sold
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleEdit(product)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                >
-                  <Edit2 size={16} />
-                  <span className="font-medium">Edit</span>
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent Orders Card */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <ShoppingBag className="text-blue-500" size={24} />
+      {/* Recent Activity & Table Row (1/3 + 2/3 split) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Recent Orders - 1/3 width */}
+        <div className="bg-white rounded-xl shadow-md p-6 lg:col-span-1">
+          <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-900">Recent Orders</h3>
+            <button
+              onClick={() => navigate('/orders')}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline"
+            >
+              See All
+            </button>
           </div>
 
           {loadingOrders ? (
@@ -389,36 +405,91 @@ export default function Home() {
             </div>
           ) : (
             <div className="space-y-3">
-              {recentOrders.map((order) => {
+              {recentOrders.slice(0, 4).map((order) => {
                 const statusConfig = getStatusConfig(order.status);
                 return (
                   <div
                     key={order.id}
                     onClick={() => navigate(`/orders/${order.id}`)}
-                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer group"
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all cursor-pointer group"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-semibold text-gray-900">#{order.id}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusConfig.bg} ${statusConfig.text}`}>
-                          {statusConfig.label}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600">{order.customer_name}</p>
-                      <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
-                        <Clock size={12} />
-                        <span>{getTimeAgo(order.created_at)}</span>
-                      </div>
+                    {/* Icon Container */}
+                    <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <ShoppingBag className="text-purple-600" size={20} />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-gray-900">{formatCurrency(order.total)}</span>
-                      <ChevronRight size={20} className="text-gray-400 group-hover:text-blue-500 transition-colors" />
+
+                    {/* Text Content */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 text-sm">Order #{String(order.id || '').slice(0, 8)}</p>
+                      <p className="text-xs text-gray-500 truncate">{order.customer_name} • {getTimeAgo(order.created_at)}</p>
                     </div>
+
+                    {/* Status Badge */}
+                    <span className={`text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap ${statusConfig.bg} ${statusConfig.text}`}>
+                      {statusConfig.label}
+                    </span>
                   </div>
                 );
               })}
             </div>
           )}
+        </div>
+
+        {/* Top Products Table - 2/3 width */}
+        <div className="bg-white rounded-xl shadow-md p-6 lg:col-span-2">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-gray-900">Top Products</h3>
+            <div className="flex items-center gap-2">
+              <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                Sort
+              </button>
+              <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                Filter
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Product</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Stocks</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Sales</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bestSellers.map((product, index) => (
+                  <tr
+                    key={product.id}
+                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                    style={{ height: '60px' }}
+                  >
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center text-xl flex-shrink-0">
+                          {product.icon}
+                        </div>
+                        <span className="font-medium text-gray-900 text-sm">{product.name}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="font-mono text-sm text-gray-700">{Math.floor(Math.random() * 500) + 50}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="font-mono text-sm text-gray-900 font-medium">
+                        {formatCurrency(Math.floor(Math.random() * 5000) + 500)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="font-mono text-sm text-gray-700">{product.unitsSold.toLocaleString()}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

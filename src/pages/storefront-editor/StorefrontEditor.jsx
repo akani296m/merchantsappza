@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, Store, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useStorefrontSettings } from './hooks/useStorefrontSettings';
+import { useSections } from '../../hooks/useSections';
 import { useAdminMerchant } from '../../context/adminMerchantContext';
+import { useProducts } from '../../context/productcontext';
 import EditorSidebar from './components/EditorSidebar';
 import LivePreview from './components/LivePreview';
 
@@ -26,9 +27,13 @@ export default function StorefrontEditor() {
         hasMerchant
     } = useAdminMerchant();
 
+    // Get products for preview
+    const { products, loading: productsLoading } = useProducts();
+
     const [merchant, setMerchant] = useState(null);
     const [loadingMerchant, setLoadingMerchant] = useState(true);
     const [merchantError, setMerchantError] = useState(null);
+    const [selectedSectionId, setSelectedSectionId] = useState(null);
 
     // Set merchant data from context - SECURITY: Only use authorized merchant
     useEffect(() => {
@@ -60,18 +65,22 @@ export default function StorefrontEditor() {
 
     }, [merchantLoading, hasMerchant, authorizedMerchant, slugParam]);
 
-    // Use the storefront settings hook with merchant ID
+    // Use the sections hook with merchant ID
     const {
-        settings,
-        loading: loadingSettings,
+        sections,
+        loading: loadingSections,
         saving,
-        error: settingsError,
+        error: sectionsError,
         hasChanges,
-        updateSetting,
-        updateTrustBadge,
-        saveSettings,
-        resetSettings
-    } = useStorefrontSettings(merchant?.id);
+        updateSectionSetting,
+        toggleSectionVisibility,
+        reorderSections,
+        addSection,
+        removeSection,
+        duplicateSection,
+        saveSections,
+        resetSections
+    } = useSections(merchant?.id);
 
     // Show loading state
     if (loadingMerchant) {
@@ -147,11 +156,11 @@ export default function StorefrontEditor() {
                 )}
             </header>
 
-            {/* Loading settings indicator */}
-            {loadingSettings && (
+            {/* Loading sections indicator */}
+            {loadingSections && (
                 <div className="bg-blue-50 border-b border-blue-100 px-4 py-2 flex items-center gap-2 text-blue-700 text-sm">
                     <Loader2 size={16} className="animate-spin" />
-                    <span>Loading settings for {merchant.slug}...</span>
+                    <span>Loading sections for {merchant.slug}...</span>
                 </div>
             )}
 
@@ -160,22 +169,32 @@ export default function StorefrontEditor() {
                 {/* Left: Live Preview */}
                 <div className="flex-1 overflow-hidden">
                     <LivePreview
-                        settings={settings}
+                        sections={sections}
+                        selectedSectionId={selectedSectionId}
+                        onSelectSection={setSelectedSectionId}
                         merchantSlug={merchant.slug}
+                        products={products}
+                        productsLoading={productsLoading}
                     />
                 </div>
 
                 {/* Right: Editor Sidebar */}
                 <div className="w-[400px] border-l border-gray-200 overflow-hidden shrink-0">
                     <EditorSidebar
-                        settings={settings}
-                        updateSetting={updateSetting}
-                        updateTrustBadge={updateTrustBadge}
-                        saveSettings={saveSettings}
-                        resetSettings={resetSettings}
+                        sections={sections}
+                        selectedSectionId={selectedSectionId}
+                        onSelectSection={setSelectedSectionId}
+                        onUpdateSectionSetting={updateSectionSetting}
+                        onToggleVisibility={toggleSectionVisibility}
+                        onReorderSections={reorderSections}
+                        onAddSection={addSection}
+                        onDuplicateSection={duplicateSection}
+                        onRemoveSection={removeSection}
+                        saveSections={saveSections}
+                        resetSections={resetSections}
                         saving={saving}
                         hasChanges={hasChanges}
-                        error={settingsError}
+                        error={sectionsError}
                         merchantSlug={merchant.slug}
                     />
                 </div>
