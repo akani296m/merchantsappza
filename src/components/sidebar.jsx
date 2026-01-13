@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, Package, DollarSign, Users, FileText, Store as StoreIcon,
   ChevronDown, ChevronUp, Settings, Sliders, Trophy, Menu, X, PanelLeftClose,
-  Grid2X2
+  Grid2X2, LogOut
 } from 'lucide-react';
 import { useAuth } from '../context/authContext';
 
@@ -25,7 +25,7 @@ export default function Sidebar() {
   const [expandedMenus, setExpandedMenus] = useState({ orders: false, 'edit my store': false });
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
 
   const toggleSubmenu = (menuKey) => {
     setExpandedMenus(prev => ({
@@ -223,6 +223,18 @@ export default function Sidebar() {
               <span className="text-[14px] font-medium text-[#111827]">Settings</span>
             </div>
             <ChevronDown size={16} className="text-[#111827]" />
+          </button>
+
+          {/* Logout */}
+          <button
+            onClick={async () => {
+              await signOut();
+              navigate('/login');
+            }}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-50 text-[#111827] hover:text-red-600 transition-colors"
+          >
+            <LogOut size={20} strokeWidth={1.5} />
+            <span className="text-[14px] font-medium">Log Out</span>
           </button>
 
           {/* Premium Promo Card */}

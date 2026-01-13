@@ -1,19 +1,77 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, ArrowLeft, Package } from 'lucide-react';
 import { useCart } from '../../context/cartcontext';
 import { useMerchant } from '../context/MerchantContext';
+import { supabase } from '../../lib/supabase';
 
 export default function Cart() {
     const navigate = useNavigate();
     const { merchantSlug } = useParams();
-    const { isCustomDomain } = useMerchant();
+    const { merchant, isCustomDomain } = useMerchant();
     const { cartItems, removeFromCart, updateQuantity, clearCart, getTotalItems, getSubtotal } = useCart();
     const basePath = isCustomDomain ? '' : `/s/${merchantSlug}`;
+    const [validating, setValidating] = useState(true);
+
+    // Validate cart items - remove any products that have been deleted from the database
+    useEffect(() => {
+        async function validateCartItems() {
+            if (cartItems.length === 0) {
+                setValidating(false);
+                return;
+            }
+
+            try {
+                // Get all product IDs from cart
+                const productIds = cartItems.map(item => item.id);
+
+                // Check which products still exist in the database
+                const { data: existingProducts, error } = await supabase
+                    .from('products')
+                    .select('id')
+                    .in('id', productIds);
+
+                if (error) {
+                    console.error('Error validating cart items:', error);
+                    setValidating(false);
+                    return;
+                }
+
+                // Get set of existing product IDs
+                const existingIds = new Set(existingProducts?.map(p => p.id) || []);
+
+                // Remove any cart items that no longer exist in the database
+                for (const item of cartItems) {
+                    if (!existingIds.has(item.id)) {
+                        console.log('[Cart] Removing deleted product from cart:', item.id, item.title);
+                        removeFromCart(item.id);
+                    }
+                }
+            } catch (err) {
+                console.error('Error validating cart:', err);
+            } finally {
+                setValidating(false);
+            }
+        }
+
+        validateCartItems();
+    }, []); // Run once on mount
 
     const subtotal = getSubtotal();
     const shipping = subtotal >= 1500 ? 0 : 150;
     const total = subtotal + shipping;
+
+    // Show loading while validating cart items
+    if (validating) {
+        return (
+            <div className="max-w-7xl mx-auto px-6 py-12">
+                <div className="text-center py-20">
+                    <div className="w-12 h-12 border-4 border-gray-200 border-t-black rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-500">Loading your cart...</p>
+                </div>
+            </div>
+        );
+    }
 
     if (cartItems.length === 0) {
         return (

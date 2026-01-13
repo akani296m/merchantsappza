@@ -64,9 +64,10 @@ const PAYMENT_GATEWAYS = [
         name: 'Yoco',
         icon: YocoIcon,
         description: 'Accept card payments with competitive rates',
-        keyField: 'yoco_public_key',
+        keyField: 'yoco_secret_key',
         dashboardUrl: 'https://portal.yoco.com/',
         dashboardLabel: 'Yoco Portal → API Keys',
+        isSecretKey: true, // Flag to indicate this is a secret key, not public
     },
     {
         id: 'peach_payments',
@@ -114,14 +115,16 @@ export default function FinanceSettings() {
             try {
                 const { data, error } = await supabase
                     .from('merchants')
-                    .select('paystack_public_key')
+                    .select('paystack_public_key, yoco_secret_key')
                     .eq('id', merchant.id)
                     .single();
 
                 if (!error && data) {
-                    if (data.paystack_public_key) {
-                        setGatewayKeys(prev => ({ ...prev, paystack: data.paystack_public_key }));
-                    }
+                    setGatewayKeys(prev => ({
+                        ...prev,
+                        paystack: data.paystack_public_key || prev.paystack,
+                        yoco: data.yoco_secret_key || prev.yoco
+                    }));
                 }
             } catch (err) {
                 console.error('Error fetching gateway keys:', err);
@@ -173,6 +176,7 @@ export default function FinanceSettings() {
 
     const renderGatewayContent = (gateway) => {
         const isActive = isGatewayActive(gateway.id);
+        const isSecretKey = gateway.isSecretKey || false;
 
         return (
             <div className="px-6 py-5 bg-gray-50 border-t border-gray-100">
@@ -191,7 +195,7 @@ export default function FinanceSettings() {
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            {gateway.name} Public Key
+                            {gateway.name} {isSecretKey ? 'Secret' : 'Public'} Key
                         </label>
                         <div className="relative">
                             <input
@@ -199,7 +203,7 @@ export default function FinanceSettings() {
                                 value={gatewayKeys[gateway.id] || ''}
                                 onChange={(e) => setGatewayKeys(prev => ({ ...prev, [gateway.id]: e.target.value }))}
                                 className="w-full px-4 py-2.5 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm bg-white"
-                                placeholder="pk_test_xxxxxxxxxxxxxxxxxxxxxxxx"
+                                placeholder={isSecretKey ? 'sk_test_xxxxxxxxxxxxxxxxxxxxxxxx' : 'pk_test_xxxxxxxxxxxxxxxxxxxxxxxx'}
                             />
                             <button
                                 type="button"
@@ -210,7 +214,7 @@ export default function FinanceSettings() {
                             </button>
                         </div>
                         <p className="text-xs text-gray-500 mt-1.5">
-                            Get your public key from your{' '}
+                            Get your {isSecretKey ? 'secret' : 'public'} key from your{' '}
                             <a
                                 href={gateway.dashboardUrl}
                                 target="_blank"
@@ -259,9 +263,19 @@ export default function FinanceSettings() {
                             <div className="text-sm text-blue-800">
                                 <p className="font-medium mb-1">Important Security Note:</p>
                                 <ul className="list-disc list-inside space-y-1 text-blue-700">
-                                    <li>Only use your <strong>Public Key</strong> (starts with <code className="bg-blue-100 px-1 rounded">pk_</code>)</li>
-                                    <li>Never use your Secret Key in this field</li>
-                                    <li>The public key is safe to use in your storefront checkout</li>
+                                    {isSecretKey ? (
+                                        <>
+                                            <li>Use your <strong>Secret Key</strong> (starts with <code className="bg-blue-100 px-1 rounded">sk_</code>)</li>
+                                            <li>This key is securely stored and never exposed to customers</li>
+                                            <li>Keep this key confidential and never share it publicly</li>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <li>Only use your <strong>Public Key</strong> (starts with <code className="bg-blue-100 px-1 rounded">pk_</code>)</li>
+                                            <li>Never use your Secret Key in this field</li>
+                                            <li>The public key is safe to use in your storefront checkout</li>
+                                        </>
+                                    )}
                                 </ul>
                             </div>
                         </div>

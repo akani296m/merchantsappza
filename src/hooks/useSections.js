@@ -1,16 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { getSectionDefaults, SECTION_TYPES } from '../components/storefront/sections';
+import { getSectionDefaults, PAGE_TYPES, getDefaultSectionsForPage } from '../components/storefront/sections';
 
 /**
  * Generate a UUID v4
- * Uses crypto.randomUUID if available, otherwise falls back to manual generation
  */
 const generateUUID = () => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();
     }
-    // Fallback UUID v4 generation
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
         const r = (Math.random() * 16) | 0;
         const v = c === 'x' ? r : (r & 0x3) | 0x8;
@@ -30,46 +28,12 @@ const createSectionWithUUID = (type, position = 0) => ({
 });
 
 /**
- * Default sections configuration for new stores
- * Uses UUIDs for the id field
- */
-const createDefaultSections = () => [
-    {
-        id: generateUUID(),
-        type: SECTION_TYPES.HERO,
-        position: 0,
-        visible: true,
-        settings: getSectionDefaults(SECTION_TYPES.HERO)
-    },
-    {
-        id: generateUUID(),
-        type: SECTION_TYPES.FEATURED_PRODUCTS,
-        position: 1,
-        visible: true,
-        settings: getSectionDefaults(SECTION_TYPES.FEATURED_PRODUCTS)
-    },
-    {
-        id: generateUUID(),
-        type: SECTION_TYPES.NEWSLETTER,
-        position: 2,
-        visible: true,
-        settings: getSectionDefaults(SECTION_TYPES.NEWSLETTER)
-    },
-    {
-        id: generateUUID(),
-        type: SECTION_TYPES.TRUST_BADGES,
-        position: 3,
-        visible: true,
-        settings: getSectionDefaults(SECTION_TYPES.TRUST_BADGES)
-    }
-];
-
-/**
  * Hook to fetch and manage storefront sections
  * @param {string} merchantId - The merchant's ID
+ * @param {string} pageType - The page type ('home', 'catalog', 'product')
  * @returns {Object} Sections state and management functions
  */
-export function useSections(merchantId) {
+export function useSections(merchantId, pageType = PAGE_TYPES.HOME) {
     const [sections, setSections] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -77,12 +41,12 @@ export function useSections(merchantId) {
     const [hasChanges, setHasChanges] = useState(false);
     const [originalSections, setOriginalSections] = useState([]);
 
-    // Fetch sections on mount or when merchantId changes
+    // Fetch sections on mount or when merchantId/pageType changes
     useEffect(() => {
         async function fetchSections() {
             if (!merchantId) {
                 console.log('[useSections] No merchantId provided, using defaults');
-                const defaults = createDefaultSections();
+                const defaults = getDefaultSectionsForPage(pageType);
                 setSections(defaults);
                 setOriginalSections(defaults);
                 setLoading(false);
@@ -92,12 +56,13 @@ export function useSections(merchantId) {
             try {
                 setLoading(true);
                 setError(null);
-                console.log('[useSections] Fetching sections for merchant:', merchantId);
+                console.log('[useSections] Fetching sections for merchant:', merchantId, 'page:', pageType);
 
                 const { data, error: fetchError } = await supabase
                     .from('storefront_sections')
                     .select('*')
                     .eq('merchant_id', merchantId)
+                    .eq('page_type', pageType)
                     .order('position', { ascending: true });
 
                 if (fetchError) {
@@ -108,13 +73,11 @@ export function useSections(merchantId) {
                 console.log('[useSections] Fetched sections:', data);
 
                 if (!data || data.length === 0) {
-                    // No sections yet - use defaults
-                    console.log('[useSections] No sections found, using defaults');
-                    const defaults = createDefaultSections();
+                    console.log('[useSections] No sections found, using defaults for', pageType);
+                    const defaults = getDefaultSectionsForPage(pageType);
                     setSections(defaults);
                     setOriginalSections(defaults);
                 } else {
-                    // Map database fields to component fields
                     const parsedSections = data.map(section => ({
                         id: section.id,
                         type: section.section_type,
@@ -130,8 +93,7 @@ export function useSections(merchantId) {
             } catch (err) {
                 console.error('[useSections] Error fetching sections:', err);
                 setError(err.message);
-                // Fallback to defaults on error
-                const defaults = createDefaultSections();
+                const defaults = getDefaultSectionsForPage(pageType);
                 setSections(defaults);
                 setOriginalSections(defaults);
             } finally {
@@ -140,7 +102,7 @@ export function useSections(merchantId) {
         }
 
         fetchSections();
-    }, [merchantId]);
+    }, [merchantId, pageType]);
 
     // Update a section's settings
     const updateSection = useCallback((sectionId, updates) => {
@@ -181,14 +143,13 @@ export function useSections(merchantId) {
         });
     }, [originalSections]);
 
-    // Reorder sections (for drag and drop)
+    // Reorder sections
     const reorderSections = useCallback((startIndex, endIndex) => {
         setSections(prev => {
             const result = Array.from(prev);
             const [removed] = result.splice(startIndex, 1);
             result.splice(endIndex, 0, removed);
 
-            // Update positions
             const updated = result.map((section, index) => ({
                 ...section,
                 position: index
@@ -205,7 +166,6 @@ export function useSections(merchantId) {
             const insertPosition = position !== null ? position : prev.length;
             const newSection = createSectionWithUUID(type, insertPosition);
 
-            // Insert at position and update subsequent positions
             const updated = [
                 ...prev.slice(0, insertPosition),
                 newSection,
@@ -238,7 +198,7 @@ export function useSections(merchantId) {
             const insertPosition = sectionToDupe.position + 1;
             const newSection = {
                 ...sectionToDupe,
-                id: generateUUID(), // Use UUID instead of string
+                id: generateUUID(),
                 position: insertPosition
             };
 
@@ -264,23 +224,25 @@ export function useSections(merchantId) {
             setSaving(true);
             setError(null);
 
-            console.log('[useSections] Saving sections for merchant:', merchantId);
+            console.log('[useSections] Saving sections for merchant:', merchantId, 'page:', pageType);
 
-            // First, delete existing sections for this merchant
+            // Delete existing sections for this merchant AND page type
             const { error: deleteError } = await supabase
                 .from('storefront_sections')
                 .delete()
-                .eq('merchant_id', merchantId);
+                .eq('merchant_id', merchantId)
+                .eq('page_type', pageType);
 
             if (deleteError) {
                 console.error('[useSections] Delete error:', deleteError);
                 throw deleteError;
             }
 
-            // Then insert all current sections with proper field mapping
+            // Insert all current sections with page_type
             const sectionsToInsert = sections.map(section => ({
                 id: section.id,
                 merchant_id: merchantId,
+                page_type: pageType,
                 section_type: section.type,
                 position: section.position,
                 is_visible: section.visible,
@@ -301,7 +263,6 @@ export function useSections(merchantId) {
 
             console.log('[useSections] Successfully saved sections:', data);
 
-            // Update original sections with the saved data
             const savedSections = data.map(section => ({
                 id: section.id,
                 type: section.section_type,
@@ -321,7 +282,7 @@ export function useSections(merchantId) {
         } finally {
             setSaving(false);
         }
-    }, [merchantId, sections]);
+    }, [merchantId, pageType, sections]);
 
     // Reset to original sections
     const resetSections = useCallback(() => {
@@ -335,6 +296,7 @@ export function useSections(merchantId) {
         saving,
         error,
         hasChanges,
+        pageType,
         updateSection,
         updateSectionSetting,
         toggleSectionVisibility,

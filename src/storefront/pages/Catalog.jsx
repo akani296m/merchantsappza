@@ -3,21 +3,27 @@ import { Link, useParams } from 'react-router-dom';
 import { Search, SlidersHorizontal, X, Package, Loader2 } from 'lucide-react';
 import { useMerchantProducts } from '../hooks/useMerchantProducts';
 import { useMerchant } from '../context/MerchantContext';
+import { useSections } from '../../hooks/useSections';
+import SectionRenderer from '../../components/storefront/SectionRenderer';
+import { PAGE_TYPES } from '../../components/storefront/sections';
 
 export default function Catalog() {
     const { merchantSlug } = useParams();
-    const { isCustomDomain } = useMerchant();
-    const { products, loading } = useMerchantProducts();
+    const { merchant, isCustomDomain, loading: merchantLoading } = useMerchant();
+    const { products, loading: productsLoading } = useMerchantProducts();
+
+    // Fetch catalog-specific sections
+    const { sections, loading: sectionsLoading } = useSections(merchant?.id, PAGE_TYPES.CATALOG);
+
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [sortBy, setSortBy] = useState('newest');
     const [showFilters, setShowFilters] = useState(false);
 
     // Base path for this merchant's storefront
-    // If on custom domain, use root path. Otherwise use /s/:slug
     const basePath = isCustomDomain ? '' : `/s/${merchantSlug}`;
 
-    // Helper to extract actual URL from nested objects or return string as-is
+    // Helper to extract actual URL from nested objects
     const getImageUrl = (imageItem) => {
         if (!imageItem) return null;
         if (typeof imageItem === 'string') return imageItem;
@@ -38,9 +44,8 @@ export default function Catalog() {
 
     // Filter and sort products
     const filteredProducts = useMemo(() => {
-        let filtered = products.filter(p => p.is_active); // Only show active products
+        let filtered = products.filter(p => p.is_active);
 
-        // Apply search filter
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(product =>
@@ -50,12 +55,10 @@ export default function Catalog() {
             );
         }
 
-        // Apply category filter
         if (selectedCategory !== 'all') {
             filtered = filtered.filter(product => product.category === selectedCategory);
         }
 
-        // Apply sorting
         const sorted = [...filtered].sort((a, b) => {
             switch (sortBy) {
                 case 'price-low':
@@ -83,22 +86,54 @@ export default function Catalog() {
 
     const hasActiveFilters = searchQuery || selectedCategory !== 'all' || sortBy !== 'newest';
 
+    // Loading state
+    if (merchantLoading || sectionsLoading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">Loading catalog...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Get sections that should appear at the top (before products)
+    const topSections = sections.filter(s =>
+        s.visible && ['catalog_header', 'rich_text', 'image_banner'].includes(s.type)
+    );
+
+    // Get sections that should appear at the bottom (after products)
+    const bottomSections = sections.filter(s =>
+        s.visible && ['newsletter', 'trust_badges'].includes(s.type)
+    );
+
     return (
         <div className="bg-gray-50 min-h-screen">
-            <div className="max-w-7xl mx-auto px-6 py-8">
+            {/* Top Sections (Header, Banners) */}
+            {topSections.length > 0 && (
+                <SectionRenderer
+                    sections={topSections}
+                    basePath={basePath}
+                    products={products}
+                    productsLoading={productsLoading}
+                />
+            )}
 
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Shop All Products</h1>
-                    <p className="text-gray-600">
-                        {loading ? 'Loading products...' : `${filteredProducts.length} products available`}
-                    </p>
-                </div>
+            <div className="max-w-7xl mx-auto px-6 py-8">
+                {/* Fallback Header if no catalog_header section */}
+                {!sections.some(s => s.type === 'catalog_header' && s.visible) && (
+                    <div className="mb-8">
+                        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Shop All Products</h1>
+                        <p className="text-gray-600">
+                            {productsLoading ? 'Loading products...' : `${filteredProducts.length} products available`}
+                        </p>
+                    </div>
+                )}
 
                 {/* Search and Filter Bar */}
                 <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
                     <div className="flex flex-col md:flex-row gap-4">
-
                         {/* Search Bar */}
                         <div className="flex-1 relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -233,14 +268,14 @@ export default function Catalog() {
                 </div>
 
                 {/* Loading State */}
-                {loading && (
+                {productsLoading && (
                     <div className="flex items-center justify-center py-20">
                         <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
                     </div>
                 )}
 
                 {/* Empty State */}
-                {!loading && filteredProducts.length === 0 && (
+                {!productsLoading && filteredProducts.length === 0 && (
                     <div className="text-center py-20 bg-white rounded-lg">
                         <Package className="mx-auto text-gray-300 mb-4" size={80} strokeWidth={1.5} />
                         <h3 className="text-2xl font-bold text-gray-900 mb-2">
@@ -263,7 +298,7 @@ export default function Catalog() {
                 )}
 
                 {/* Product Grid */}
-                {!loading && filteredProducts.length > 0 && (
+                {!productsLoading && filteredProducts.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {filteredProducts.map((product) => {
                             const imageUrl = product.images && product.images[0]
@@ -312,26 +347,19 @@ export default function Catalog() {
 
                                     {/* Product Info */}
                                     <div className="p-4">
-                                        {/* Category */}
                                         {product.category && (
                                             <span className="text-xs text-gray-500 uppercase tracking-wider">
                                                 {product.category}
                                             </span>
                                         )}
-
-                                        {/* Title */}
                                         <h3 className="font-semibold text-gray-900 mt-1 mb-2 group-hover:text-blue-600 transition line-clamp-2">
                                             {product.title}
                                         </h3>
-
-                                        {/* Description */}
                                         {product.description && (
                                             <p className="text-sm text-gray-500 mb-3 line-clamp-2">
                                                 {product.description}
                                             </p>
                                         )}
-
-                                        {/* Price and Stock */}
                                         <div className="flex items-center justify-between">
                                             <span className="text-lg font-bold text-gray-900">
                                                 R {Number(product.price).toLocaleString('en-ZA', {
@@ -343,8 +371,6 @@ export default function Catalog() {
                                                 <span className="text-xs text-green-600 font-medium">In Stock</span>
                                             )}
                                         </div>
-
-                                        {/* Tags */}
                                         {Array.isArray(product.tags) && product.tags.length > 0 && (
                                             <div className="flex flex-wrap gap-1 mt-3">
                                                 {product.tags.slice(0, 3).map((tag, idx) => (
@@ -365,12 +391,22 @@ export default function Catalog() {
                 )}
 
                 {/* Results Count */}
-                {!loading && filteredProducts.length > 0 && (
+                {!productsLoading && filteredProducts.length > 0 && (
                     <div className="mt-8 text-center text-sm text-gray-500">
                         Showing {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'}
                     </div>
                 )}
             </div>
+
+            {/* Bottom Sections (Newsletter, Trust Badges) */}
+            {bottomSections.length > 0 && (
+                <SectionRenderer
+                    sections={bottomSections}
+                    basePath={basePath}
+                    products={products}
+                    productsLoading={productsLoading}
+                />
+            )}
         </div>
     );
 }

@@ -8,6 +8,7 @@ import ProductDetail from '../pages/ProductDetail';
 import Cart from '../pages/Cart';
 import Checkout from '../pages/Checkout';
 import OrderConfirmation from '../pages/OrderConfirmation';
+import PaymentResult from '../pages/PaymentResult';
 
 /**
  * CustomDomainStorefront
@@ -42,6 +43,11 @@ export default function CustomDomainStorefront() {
 
                     {/* Order confirmation */}
                     <Route path="order-confirmation/:orderId" element={<OrderConfirmation />} />
+
+                    {/* Yoco Payment Result Pages */}
+                    <Route path="payment-success" element={<PaymentResult />} />
+                    <Route path="payment-cancelled" element={<PaymentResult />} />
+                    <Route path="payment-failed" element={<PaymentResult />} />
                 </Route>
             </Routes>
         </MerchantProvider>

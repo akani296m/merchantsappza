@@ -6,6 +6,7 @@
  * - Individual section components
  * - A registry object for dynamic section rendering
  * - Helper functions for the editor
+ * - Page type constants
  */
 
 // Import all section components
@@ -15,18 +16,60 @@ import NewsletterSection from './NewsletterSection';
 import TrustBadgesSection, { TRUST_BADGE_ICONS } from './TrustBadgesSection';
 import RichTextSection from './RichTextSection';
 import ImageBannerSection from './ImageBannerSection';
+import CatalogHeaderSection from './CatalogHeaderSection';
+import ProductTrustSection, { PRODUCT_TRUST_ICONS } from './ProductTrustSection';
+import RelatedProductsSection from './RelatedProductsSection';
+
+/**
+ * Page Types
+ * Different pages that can have customizable sections
+ */
+export const PAGE_TYPES = {
+    HOME: 'home',
+    CATALOG: 'catalog',
+    PRODUCT: 'product'
+};
+
+/**
+ * Page Type Labels and Icons
+ */
+export const PAGE_TYPE_CONFIG = {
+    [PAGE_TYPES.HOME]: {
+        label: 'Home Page',
+        icon: 'Home',
+        description: 'Your storefront homepage'
+    },
+    [PAGE_TYPES.CATALOG]: {
+        label: 'Catalog Page',
+        icon: 'LayoutGrid',
+        description: 'Product listing/shop all page'
+    },
+    [PAGE_TYPES.PRODUCT]: {
+        label: 'Product Page',
+        icon: 'Package',
+        description: 'Individual product detail page'
+    }
+};
 
 /**
  * Section Registry
  * Maps section type strings to their React components
  */
 export const SECTION_REGISTRY = {
+    // Home page sections (also available on other pages)
     hero: HeroSection,
     featured_products: FeaturedProductsSection,
     newsletter: NewsletterSection,
     trust_badges: TrustBadgesSection,
     rich_text: RichTextSection,
     image_banner: ImageBannerSection,
+
+    // Catalog page sections
+    catalog_header: CatalogHeaderSection,
+
+    // Product page sections
+    product_trust: ProductTrustSection,
+    related_products: RelatedProductsSection,
 };
 
 /**
@@ -40,14 +83,25 @@ export const getSectionComponent = (type) => {
 
 /**
  * Get list of all available sections with their metadata
- * Useful for the "Add Section" UI in the editor
+ * @param {string} pageType - Optional page type to filter sections
  * @returns {Array} Array of section metadata objects
  */
-export const getAvailableSections = () => {
-    return Object.entries(SECTION_REGISTRY).map(([type, Component]) => ({
-        type,
-        ...Component.sectionMeta
-    }));
+export const getAvailableSections = (pageType = null) => {
+    return Object.entries(SECTION_REGISTRY)
+        .map(([type, Component]) => ({
+            type,
+            ...Component.sectionMeta
+        }))
+        .filter(section => {
+            // If no page type filter, return all sections
+            if (!pageType) return true;
+
+            // If section has no pageTypes restriction, it's available everywhere
+            if (!section.pageTypes) return true;
+
+            // Otherwise, check if the section is available for this page type
+            return section.pageTypes.includes(pageType);
+        });
 };
 
 /**
@@ -112,6 +166,35 @@ export const createSection = (type, position = 0) => {
     };
 };
 
+/**
+ * Get default sections for a page type
+ * @param {string} pageType - The page type
+ * @returns {Array} Array of default section configurations
+ */
+export const getDefaultSectionsForPage = (pageType) => {
+    switch (pageType) {
+        case PAGE_TYPES.HOME:
+            return [
+                createSection(SECTION_TYPES.HERO, 0),
+                createSection(SECTION_TYPES.FEATURED_PRODUCTS, 1),
+                createSection(SECTION_TYPES.NEWSLETTER, 2),
+                createSection(SECTION_TYPES.TRUST_BADGES, 3)
+            ];
+        case PAGE_TYPES.CATALOG:
+            return [
+                createSection('catalog_header', 0),
+                createSection(SECTION_TYPES.NEWSLETTER, 1)
+            ];
+        case PAGE_TYPES.PRODUCT:
+            return [
+                createSection('product_trust', 0),
+                createSection('related_products', 1)
+            ];
+        default:
+            return [];
+    }
+};
+
 // Re-export individual components for direct imports if needed
 export {
     HeroSection,
@@ -120,7 +203,11 @@ export {
     TrustBadgesSection,
     RichTextSection,
     ImageBannerSection,
-    TRUST_BADGE_ICONS
+    CatalogHeaderSection,
+    ProductTrustSection,
+    RelatedProductsSection,
+    TRUST_BADGE_ICONS,
+    PRODUCT_TRUST_ICONS
 };
 
 // Export section type constants for type safety
@@ -131,4 +218,7 @@ export const SECTION_TYPES = {
     TRUST_BADGES: 'trust_badges',
     RICH_TEXT: 'rich_text',
     IMAGE_BANNER: 'image_banner',
+    CATALOG_HEADER: 'catalog_header',
+    PRODUCT_TRUST: 'product_trust',
+    RELATED_PRODUCTS: 'related_products',
 };

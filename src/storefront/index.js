@@ -5,6 +5,7 @@ export { default as ProductDetail } from './pages/ProductDetail';
 export { default as Cart } from './pages/Cart';
 export { default as Checkout } from './pages/Checkout';
 export { default as OrderConfirmation } from './pages/OrderConfirmation';
+export { default as PaymentResult } from './pages/PaymentResult';
 
 // Storefront Components
 export { default as StorefrontLayout } from './components/StorefrontLayout';

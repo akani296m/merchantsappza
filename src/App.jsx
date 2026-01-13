@@ -43,6 +43,7 @@ import {
   Cart,
   Checkout,
   OrderConfirmation,
+  PaymentResult,
   CustomDomainStorefront
 } from './storefront';
 
@@ -160,6 +161,11 @@ export default function App() {
 
         {/* /s/:merchantSlug/order-confirmation/:orderId */}
         <Route path="order-confirmation/:orderId" element={<OrderConfirmation />} />
+
+        {/* Yoco Payment Result Pages */}
+        <Route path="payment-success" element={<PaymentResult />} />
+        <Route path="payment-cancelled" element={<PaymentResult />} />
+        <Route path="payment-failed" element={<PaymentResult />} />
       </Route>
 
       {/* =========================================== */}
@@ -190,6 +196,11 @@ export default function App() {
         <Route path="cart" element={<Cart />} />
         <Route path="checkout" element={<Checkout />} />
         <Route path="order-confirmation/:orderId" element={<OrderConfirmation />} />
+
+        {/* Yoco Payment Result Pages */}
+        <Route path="payment-success" element={<PaymentResult />} />
+        <Route path="payment-cancelled" element={<PaymentResult />} />
+        <Route path="payment-failed" element={<PaymentResult />} />
       </Route>
 
       {/* =========================================== */}

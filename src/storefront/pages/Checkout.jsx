@@ -125,6 +125,121 @@ export default function Checkout() {
         }
     };
 
+    // Validate that cart items still exist in the database
+    const validateCartItems = async () => {
+        if (cartItems.length === 0) return { valid: false, removedItems: [] };
+
+        try {
+            const productIds = cartItems.map(item => item.id);
+            const { data: existingProducts, error } = await supabase
+                .from('products')
+                .select('id')
+                .in('id', productIds);
+
+            if (error) {
+                console.error('Error validating cart items:', error);
+                return { valid: false, error: 'Unable to validate cart' };
+            }
+
+            const existingIds = new Set(existingProducts?.map(p => p.id) || []);
+            const removedItems = cartItems.filter(item => !existingIds.has(item.id));
+
+            return {
+                valid: removedItems.length === 0,
+                removedItems
+            };
+        } catch (err) {
+            console.error('Error validating cart:', err);
+            return { valid: false, error: 'Unable to validate cart' };
+        }
+    };
+
+    const handleYocoPayment = async () => {
+        isCompletingOrder.current = true;
+
+        try {
+            // Prepare order data to store temporarily
+            const orderData = {
+                merchant_id: merchant?.id,
+                customer_email: formData.email,
+                customer_name: `${formData.firstName} ${formData.lastName}`,
+                customer_phone: formData.phone,
+                shipping_address: {
+                    address: formData.address,
+                    city: formData.city,
+                    province: formData.province,
+                    postalCode: formData.postalCode
+                },
+                items: cartItems.map(item => ({
+                    product_id: item.id,
+                    title: item.title,
+                    quantity: item.quantity,
+                    price: item.price,
+                    subtotal: item.price * item.quantity
+                })),
+                subtotal,
+                shipping,
+                tax,
+                total,
+                notes: formData.orderNotes || null,
+                created_at: new Date().toISOString()
+            };
+
+            // Store order data temporarily in sessionStorage
+            sessionStorage.setItem('pendingYocoOrder', JSON.stringify(orderData));
+
+            // Build callback URLs
+            const baseUrl = window.location.origin;
+            const successUrl = `${baseUrl}${basePath}/payment-success`;
+            const cancelUrl = `${baseUrl}${basePath}/payment-cancelled`;
+            const failureUrl = `${baseUrl}${basePath}/payment-failed`;
+
+            // Call our Edge Function to create Yoco checkout
+            const response = await fetch('/api/create-yoco-checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    merchantId: merchant.id,
+                    amount: Math.round(total * 100), // Amount in cents
+                    currency: 'ZAR',
+                    successUrl,
+                    cancelUrl,
+                    failureUrl,
+                    customerEmail: formData.email,
+                    customerName: `${formData.firstName} ${formData.lastName}`,
+                    customerPhone: formData.phone,
+                    metadata: {
+                        orderNotes: formData.orderNotes || '',
+                    },
+                    lineItems: cartItems.map(item => ({
+                        title: item.title,
+                        quantity: item.quantity,
+                        price: item.price,
+                        description: item.description || item.title,
+                    })),
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Failed to create checkout session');
+            }
+
+            // Redirect to Yoco checkout page
+            window.location.href = data.redirectUrl;
+
+        } catch (error) {
+            console.error('Error creating Yoco checkout:', error);
+            alert(error.message || 'There was an error processing your payment. Please try again.');
+            setLoading(false);
+            isCompletingOrder.current = false;
+            sessionStorage.removeItem('pendingYocoOrder');
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -134,49 +249,71 @@ export default function Checkout() {
             return;
         }
 
-        // Check if merchant has Paystack configured
-        if (!merchant?.paystack_public_key) {
+        // Detect which payment gateway is configured
+        const hasPaystack = merchant?.paystack_public_key;
+        const hasYoco = merchant?.yoco_secret_key;
+
+        if (!hasPaystack && !hasYoco) {
             alert('Payment gateway not configured. Please contact the store owner.');
             return;
         }
 
         setLoading(true);
 
-        try {
-            const paystack = new PaystackPop();
-
-            paystack.newTransaction({
-                key: merchant.paystack_public_key,
-                email: formData.email,
-                amount: Math.round(total * 100), // Paystack expects amount in kobo (cents)
-                currency: 'ZAR',
-                ref: `${merchant.slug}-${Date.now()}`,
-                metadata: {
-                    custom_fields: [
-                        {
-                            display_name: 'Customer Name',
-                            variable_name: 'customer_name',
-                            value: `${formData.firstName} ${formData.lastName}`
-                        },
-                        {
-                            display_name: 'Phone',
-                            variable_name: 'phone',
-                            value: formData.phone
-                        }
-                    ]
-                },
-                onSuccess: (transaction) => {
-                    handlePaystackSuccess(transaction);
-                },
-                onCancel: () => {
-                    setLoading(false);
-                    isCompletingOrder.current = false;
-                }
-            });
-        } catch (error) {
-            console.error('Error initializing payment:', error);
-            alert('There was an error processing your payment. Please try again.');
+        // Validate cart items still exist before processing payment
+        const cartValidation = await validateCartItems();
+        if (!cartValidation.valid) {
+            if (cartValidation.removedItems?.length > 0) {
+                const removedNames = cartValidation.removedItems.map(item => item.title).join(', ');
+                alert(`Some items in your cart are no longer available: ${removedNames}. Please go back to your cart to update it.`);
+            } else {
+                alert('Unable to validate your cart. Please refresh and try again.');
+            }
             setLoading(false);
+            navigate(`${basePath}/cart`);
+            return;
+        }
+
+        // Use Yoco if configured, otherwise fall back to Paystack
+        if (hasYoco) {
+            await handleYocoPayment();
+        } else if (hasPaystack) {
+            try {
+                const paystack = new PaystackPop();
+
+                paystack.newTransaction({
+                    key: merchant.paystack_public_key,
+                    email: formData.email,
+                    amount: Math.round(total * 100), // Paystack expects amount in kobo (cents)
+                    currency: 'ZAR',
+                    ref: `${merchant.slug}-${Date.now()}`,
+                    metadata: {
+                        custom_fields: [
+                            {
+                                display_name: 'Customer Name',
+                                variable_name: 'customer_name',
+                                value: `${formData.firstName} ${formData.lastName}`
+                            },
+                            {
+                                display_name: 'Phone',
+                                variable_name: 'phone',
+                                value: formData.phone
+                            }
+                        ]
+                    },
+                    onSuccess: (transaction) => {
+                        handlePaystackSuccess(transaction);
+                    },
+                    onCancel: () => {
+                        setLoading(false);
+                        isCompletingOrder.current = false;
+                    }
+                });
+            } catch (error) {
+                console.error('Error initializing payment:', error);
+                alert('There was an error processing your payment. Please try again.');
+                setLoading(false);
+            }
         }
     };
 
@@ -238,9 +375,14 @@ export default function Checkout() {
                                             <Lock className="text-white" size={24} />
                                         </div>
                                         <div>
-                                            <h3 className="font-semibold text-gray-900 mb-2">Secure Payment with Paystack</h3>
+                                            <h3 className="font-semibold text-gray-900 mb-2">
+                                                Secure Payment with {merchant?.yoco_secret_key ? 'Yoco' : 'Paystack'}
+                                            </h3>
                                             <p className="text-sm text-gray-700 mb-3">
-                                                When you click "Complete Order", you'll be redirected to our secure payment gateway to complete your purchase.
+                                                {merchant?.yoco_secret_key
+                                                    ? "When you click \"Complete Order\", you'll be securely redirected to Yoco to complete your payment."
+                                                    : "When you click \"Complete Order\", you'll be redirected to our secure payment gateway to complete your purchase."
+                                                }
                                             </p>
                                             <div className="space-y-2 text-sm text-gray-600">
                                                 <div className="flex items-center gap-2">
@@ -251,10 +393,12 @@ export default function Checkout() {
                                                     <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                                                     <span>Bank Transfer</span>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                                                    <span>Mobile Money</span>
-                                                </div>
+                                                {!merchant?.yoco_secret_key && (
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                                        <span>Mobile Money</span>
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="mt-4 pt-4 border-t border-blue-200">
                                                 <p className="text-xs text-gray-500">

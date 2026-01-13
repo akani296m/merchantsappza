@@ -1,6 +1,6 @@
 import React from 'react';
-import { X, Image, Grid, Mail, Shield, FileText, ImageIcon } from 'lucide-react';
-import { getAvailableSections } from '../../../components/storefront/sections';
+import { X, Image, Grid, Mail, Shield, FileText, ImageIcon, LayoutList, Package } from 'lucide-react';
+import { getAvailableSections, PAGE_TYPE_CONFIG } from '../../../components/storefront/sections';
 
 // Icon mapping for section types
 const SECTION_ICONS = {
@@ -9,17 +9,22 @@ const SECTION_ICONS = {
     newsletter: Mail,
     trust_badges: Shield,
     rich_text: FileText,
-    image_banner: ImageIcon
+    image_banner: ImageIcon,
+    catalog_header: LayoutList,
+    product_trust: Shield,
+    related_products: Package
 };
 
 /**
  * Add Section Modal
- * Displays available section types to add
+ * Displays available section types to add, filtered by page type
  */
-export default function AddSectionModal({ isOpen, onClose, onAddSection }) {
+export default function AddSectionModal({ isOpen, onClose, onAddSection, pageType = 'home' }) {
     if (!isOpen) return null;
 
-    const availableSections = getAvailableSections();
+    // Get sections available for the current page type
+    const availableSections = getAvailableSections(pageType);
+    const pageConfig = PAGE_TYPE_CONFIG[pageType];
 
     const handleAddSection = (type) => {
         onAddSection(type);
@@ -40,7 +45,9 @@ export default function AddSectionModal({ isOpen, onClose, onAddSection }) {
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                     <div>
                         <h2 className="text-lg font-bold text-gray-900">Add Section</h2>
-                        <p className="text-sm text-gray-500">Choose a section type to add</p>
+                        <p className="text-sm text-gray-500">
+                            Choose a section for your {pageConfig?.label.toLowerCase() || 'page'}
+                        </p>
                     </div>
                     <button
                         onClick={onClose}

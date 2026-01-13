@@ -11,6 +11,7 @@ import {
 import SectionList from './SectionList';
 import SectionEditor from './SectionEditor';
 import AddSectionModal from './AddSectionModal';
+import { PAGE_TYPE_CONFIG } from '../../../components/storefront/sections';
 
 /**
  * Editor Sidebar with section management
@@ -31,14 +32,16 @@ export default function EditorSidebar({
     saving,
     hasChanges,
     error,
-    merchantSlug
+    merchantSlug,
+    pageType = 'home'
 }) {
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [saveError, setSaveError] = useState(null);
     const [showAddModal, setShowAddModal] = useState(false);
-    const [editMode, setEditMode] = useState('list'); // 'list' or 'edit'
+    const [editMode, setEditMode] = useState('list');
 
     const selectedSection = sections.find(s => s.id === selectedSectionId);
+    const pageConfig = PAGE_TYPE_CONFIG[pageType];
 
     const handleSave = async () => {
         setSaveError(null);
@@ -81,9 +84,16 @@ export default function EditorSidebar({
         <div className="h-full flex flex-col bg-[#F6F6F7]">
             {/* Header */}
             <div className="px-4 py-4 border-b border-gray-200 bg-white">
-                <div className="flex items-center gap-2">
-                    <Layers size={20} className="text-blue-500" />
-                    <h2 className="text-lg font-bold text-gray-900">Sections</h2>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Layers size={20} className="text-blue-500" />
+                        <h2 className="text-lg font-bold text-gray-900">Sections</h2>
+                    </div>
+                    {pageConfig && (
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                            {pageConfig.label}
+                        </span>
+                    )}
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
                     {editMode === 'list'
@@ -187,6 +197,7 @@ export default function EditorSidebar({
                 isOpen={showAddModal}
                 onClose={() => setShowAddModal(false)}
                 onAddSection={handleAddSection}
+                pageType={pageType}
             />
         </div>
     );

@@ -261,20 +261,7 @@ export default function ProductCreator() {
   };
 
   const handlePreview = () => {
-    const productData = {
-      title: productTitle || 'Untitled Product',
-      price,
-      rating: 5,
-      description: description,
-      images: images.length > 0 ? images.map(img => img.url) : ['No Image'],
-      tabs: [
-        { id: '1', title: 'Description', content: description || 'No description.' },
-        { id: '2', title: 'Product Details', content: `Category: ${category}\nInventory: ${inventory}` },
-        { id: '3', title: 'Shipping', content: 'Standard shipping rates apply.' },
-      ]
-    };
-
-    navigate('/store/product-preview', { state: { product: productData } });
+    setShowPreview(true);
   };
 
   return (

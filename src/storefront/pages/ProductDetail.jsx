@@ -1,16 +1,23 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Star, Truck, ShieldCheck, ArrowLeft, Minus, Plus, Package, Loader2, Heart, Share2 } from 'lucide-react';
-import { useMerchantProduct } from '../hooks/useMerchantProducts';
+import { Truck, ShieldCheck, ArrowLeft, Minus, Plus, Package, Loader2, Heart, Share2 } from 'lucide-react';
+import { useMerchantProduct, useMerchantProducts } from '../hooks/useMerchantProducts';
 import { useCart } from '../../context/cartcontext';
 import { useMerchant } from '../context/MerchantContext';
+import { useSections } from '../../hooks/useSections';
+import SectionRenderer from '../../components/storefront/SectionRenderer';
+import { PAGE_TYPES } from '../../components/storefront/sections';
 
 export default function ProductDetail() {
     const { merchantSlug, productId } = useParams();
     const navigate = useNavigate();
-    const { isCustomDomain } = useMerchant();
+    const { merchant, isCustomDomain, loading: merchantLoading } = useMerchant();
     const { product, loading } = useMerchantProduct(productId);
+    const { products, loading: productsLoading } = useMerchantProducts();
     const { addToCart } = useCart();
+
+    // Fetch product-specific sections
+    const { sections, loading: sectionsLoading } = useSections(merchant?.id, PAGE_TYPES.PRODUCT);
 
     const [activeImage, setActiveImage] = useState(0);
     const [quantity, setQuantity] = useState(1);
@@ -19,7 +26,7 @@ export default function ProductDetail() {
     // Base path for this merchant's storefront
     const basePath = isCustomDomain ? '' : `/s/${merchantSlug}`;
 
-    // Helper to extract actual URL from nested objects or return string as-is
+    // Helper to extract actual URL from nested objects
     const getImageUrl = (imageItem) => {
         if (!imageItem) return null;
         if (typeof imageItem === 'string') return imageItem;
@@ -62,7 +69,7 @@ export default function ProductDetail() {
     };
 
     // Loading state
-    if (loading) {
+    if (loading || merchantLoading || sectionsLoading) {
         return (
             <div className="max-w-7xl mx-auto px-6 py-12">
                 <div className="flex items-center justify-center min-h-[500px]">
@@ -96,6 +103,19 @@ export default function ProductDetail() {
 
     const hasImages = productImages.length > 0;
     const inStock = product.inventory && product.inventory > 0;
+
+    // Get trust/info sections (product_trust type)
+    const trustSections = sections.filter(s =>
+        s.visible && s.type === 'product_trust'
+    );
+
+    // Get bottom sections (related_products, newsletter)
+    const bottomSections = sections.filter(s =>
+        s.visible && ['related_products', 'newsletter', 'rich_text'].includes(s.type)
+    );
+
+    // Check if we have a custom trust section or should use default
+    const hasCustomTrustSection = trustSections.length > 0;
 
     return (
         <div className="bg-white min-h-screen">
@@ -263,24 +283,33 @@ export default function ProductDetail() {
                             </div>
                         </div>
 
-                        {/* Trust Signals */}
-                        <div className="border-t border-gray-200 pt-6 space-y-4 text-sm text-gray-600">
-                            <div className="flex items-center gap-3">
-                                <Truck size={22} className="text-gray-800" />
-                                <div>
-                                    <p className="font-medium text-gray-900">Free Shipping</p>
-                                    <p className="text-xs">On orders over R 1,500</p>
+                        {/* Trust Signals - Custom Section or Default */}
+                        {hasCustomTrustSection ? (
+                            <SectionRenderer
+                                sections={trustSections}
+                                basePath={basePath}
+                                products={products}
+                                productsLoading={productsLoading}
+                            />
+                        ) : (
+                            // Default trust signals
+                            <div className="border-t border-gray-200 pt-6 space-y-4 text-sm text-gray-600">
+                                <div className="flex items-center gap-3">
+                                    <Truck size={22} className="text-gray-800" />
+                                    <div>
+                                        <p className="font-medium text-gray-900">Free Shipping</p>
+                                        <p className="text-xs">On orders over R 1,500</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <ShieldCheck size={22} className="text-gray-800" />
+                                    <div>
+                                        <p className="font-medium text-gray-900">Secure Payment</p>
+                                        <p className="text-xs">Protected checkout & 30-day returns</p>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <ShieldCheck size={22} className="text-gray-800" />
-                                <div>
-                                    <p className="font-medium text-gray-900">Secure Payment</p>
-                                    <p className="text-xs">Protected checkout & 30-day returns</p>
-                                </div>
-                            </div>
-                        </div>
-
+                        )}
                     </div>
                 </div>
 
@@ -311,6 +340,16 @@ export default function ProductDetail() {
                     </div>
                 </div>
             </div>
+
+            {/* Bottom Sections (Related Products, Newsletter) */}
+            {bottomSections.length > 0 && (
+                <SectionRenderer
+                    sections={bottomSections}
+                    basePath={basePath}
+                    products={products}
+                    productsLoading={productsLoading}
+                />
+            )}
         </div>
     );
 }
