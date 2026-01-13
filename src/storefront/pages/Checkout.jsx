@@ -44,6 +44,35 @@ export default function Checkout() {
         orderNotes: ''
     });
 
+    // Determine available payment gateways
+    const availableGateways = [];
+    if (merchant?.paystack_public_key) {
+        availableGateways.push({
+            id: 'paystack',
+            name: 'Paystack',
+            description: 'Pay securely with cards, bank transfer, or mobile money',
+            icon: '💳'
+        });
+    }
+    if (merchant?.yoco_secret_key) {
+        availableGateways.push({
+            id: 'yoco',
+            name: 'Yoco',
+            description: 'Pay securely with credit or debit card',
+            icon: '💳'
+        });
+    }
+
+    // Default to first available gateway
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
+
+    // Set default payment method when gateways are loaded
+    useEffect(() => {
+        if (availableGateways.length > 0 && !selectedPaymentMethod) {
+            setSelectedPaymentMethod(availableGateways[0].id);
+        }
+    }, [merchant?.paystack_public_key, merchant?.yoco_secret_key]);
+
     useEffect(() => {
         if (cartItems.length === 0 && !isCompletingOrder.current) {
             navigate(`${basePath}/cart`);
@@ -249,12 +278,15 @@ export default function Checkout() {
             return;
         }
 
-        // Detect which payment gateway is configured
-        const hasPaystack = merchant?.paystack_public_key;
-        const hasYoco = merchant?.yoco_secret_key;
-
-        if (!hasPaystack && !hasYoco) {
+        // Check if any payment gateway is configured
+        if (availableGateways.length === 0) {
             alert('Payment gateway not configured. Please contact the store owner.');
+            return;
+        }
+
+        // Validate payment method is selected
+        if (!selectedPaymentMethod) {
+            alert('Please select a payment method.');
             return;
         }
 
@@ -274,10 +306,10 @@ export default function Checkout() {
             return;
         }
 
-        // Use Yoco if configured, otherwise fall back to Paystack
-        if (hasYoco) {
+        // Process payment based on customer's selected method
+        if (selectedPaymentMethod === 'yoco') {
             await handleYocoPayment();
-        } else if (hasPaystack) {
+        } else if (selectedPaymentMethod === 'paystack') {
             try {
                 const paystack = new PaystackPop();
 
@@ -369,45 +401,75 @@ export default function Checkout() {
 
                             <div className="bg-white rounded-lg p-6 shadow-sm">
                                 <h2 className="text-xl font-bold mb-4">Payment Method</h2>
-                                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-6">
-                                    <div className="flex items-start gap-4">
-                                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                                            <Lock className="text-white" size={24} />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-semibold text-gray-900 mb-2">
-                                                Secure Payment with {merchant?.yoco_secret_key ? 'Yoco' : 'Paystack'}
-                                            </h3>
-                                            <p className="text-sm text-gray-700 mb-3">
-                                                {merchant?.yoco_secret_key
-                                                    ? "When you click \"Complete Order\", you'll be securely redirected to Yoco to complete your payment."
-                                                    : "When you click \"Complete Order\", you'll be redirected to our secure payment gateway to complete your purchase."
-                                                }
-                                            </p>
-                                            <div className="space-y-2 text-sm text-gray-600">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                                                    <span>Credit & Debit Cards</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                                                    <span>Bank Transfer</span>
-                                                </div>
-                                                {!merchant?.yoco_secret_key && (
+
+                                {availableGateways.length === 0 ? (
+                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                        <p className="text-yellow-800 text-sm">No payment methods available. Please contact the store owner.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {availableGateways.map((gateway) => (
+                                            <label
+                                                key={gateway.id}
+                                                className={`flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedPaymentMethod === gateway.id
+                                                        ? 'border-blue-500 bg-blue-50/50'
+                                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="paymentMethod"
+                                                    value={gateway.id}
+                                                    checked={selectedPaymentMethod === gateway.id}
+                                                    onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                                                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                                />
+                                                <div className="flex-1">
                                                     <div className="flex items-center gap-2">
-                                                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                                                        <span>Mobile Money</span>
+                                                        <span className="text-lg">{gateway.icon}</span>
+                                                        <span className="font-semibold text-gray-900">{gateway.name}</span>
+                                                        {selectedPaymentMethod === gateway.id && (
+                                                            <span className="ml-auto text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                                                                Selected
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </div>
-                                            <div className="mt-4 pt-4 border-t border-blue-200">
-                                                <p className="text-xs text-gray-500">
-                                                    🔒 Your payment information is encrypted and secure. We never store your card details.
-                                                </p>
-                                            </div>
+                                                    <p className="text-sm text-gray-600 mt-1">{gateway.description}</p>
+
+                                                    {/* Show payment method details when selected */}
+                                                    {selectedPaymentMethod === gateway.id && (
+                                                        <div className="mt-3 pt-3 border-t border-blue-200">
+                                                            <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+                                                                <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                                                                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                                                                    Credit & Debit Cards
+                                                                </span>
+                                                                <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                                                                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                                                                    Bank Transfer
+                                                                </span>
+                                                                {gateway.id === 'paystack' && (
+                                                                    <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                                                                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                                                                        Mobile Money
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </label>
+                                        ))}
+
+                                        {/* Security notice */}
+                                        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+                                            <Lock size={14} className="text-gray-400" />
+                                            <p className="text-xs text-gray-500">
+                                                Your payment information is encrypted and secure. We never store your card details.
+                                            </p>
                                         </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         </div>
 
