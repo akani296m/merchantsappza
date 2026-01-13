@@ -19,6 +19,8 @@ import ImageBannerSection from './ImageBannerSection';
 import CatalogHeaderSection from './CatalogHeaderSection';
 import ProductTrustSection, { PRODUCT_TRUST_ICONS } from './ProductTrustSection';
 import RelatedProductsSection from './RelatedProductsSection';
+import FAQSection from './FAQSection';
+import AnnouncementBarSection, { ANNOUNCEMENT_ICONS } from './AnnouncementBarSection';
 
 /**
  * Page Types
@@ -63,6 +65,8 @@ export const SECTION_REGISTRY = {
     trust_badges: TrustBadgesSection,
     rich_text: RichTextSection,
     image_banner: ImageBannerSection,
+    faq: FAQSection,
+    announcement_bar: AnnouncementBarSection,
 
     // Catalog page sections
     catalog_header: CatalogHeaderSection,
@@ -206,8 +210,11 @@ export {
     CatalogHeaderSection,
     ProductTrustSection,
     RelatedProductsSection,
+    FAQSection,
+    AnnouncementBarSection,
     TRUST_BADGE_ICONS,
-    PRODUCT_TRUST_ICONS
+    PRODUCT_TRUST_ICONS,
+    ANNOUNCEMENT_ICONS
 };
 
 // Export section type constants for type safety
@@ -218,6 +225,8 @@ export const SECTION_TYPES = {
     TRUST_BADGES: 'trust_badges',
     RICH_TEXT: 'rich_text',
     IMAGE_BANNER: 'image_banner',
+    FAQ: 'faq',
+    ANNOUNCEMENT_BAR: 'announcement_bar',
     CATALOG_HEADER: 'catalog_header',
     PRODUCT_TRUST: 'product_trust',
     RELATED_PRODUCTS: 'related_products',

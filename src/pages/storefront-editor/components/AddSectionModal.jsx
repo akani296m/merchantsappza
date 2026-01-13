@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Image, Grid, Mail, Shield, FileText, ImageIcon, LayoutList, Package } from 'lucide-react';
+import { X, Image, Grid, Mail, Shield, FileText, ImageIcon, LayoutList, Package, HelpCircle, Megaphone } from 'lucide-react';
 import { getAvailableSections, PAGE_TYPE_CONFIG } from '../../../components/storefront/sections';
 
 // Icon mapping for section types
@@ -12,7 +12,9 @@ const SECTION_ICONS = {
     image_banner: ImageIcon,
     catalog_header: LayoutList,
     product_trust: Shield,
-    related_products: Package
+    related_products: Package,
+    faq: HelpCircle,
+    announcement_bar: Megaphone
 };
 
 /**
