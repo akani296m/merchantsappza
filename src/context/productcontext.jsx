@@ -77,6 +77,7 @@ export function ProductProvider({ children }) {
           images: newProduct.images,
           tags: newProduct.tags,
           is_active: newProduct.is_active !== undefined ? newProduct.is_active : true,
+          template_id: newProduct.template_id || null, // Product page template
           merchant_id: merchantId // ✅ Associate with current merchant
         }])
         .select()
@@ -114,6 +115,7 @@ export function ProductProvider({ children }) {
           images: updatedProduct.images,
           tags: updatedProduct.tags,
           is_active: updatedProduct.is_active,
+          template_id: updatedProduct.template_id || null, // Product page template
         })
         .eq('id', id)
         .eq('merchant_id', merchantId) // ✅ Security: ensure product belongs to this merchant

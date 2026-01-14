@@ -3,12 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { TrendingUp, Package, Edit2, ShoppingBag, ChevronRight, Clock, BarChart3 } from 'lucide-react';
+import {
+  TrendingUp, Package, Edit2, ShoppingBag, ChevronRight, Clock, BarChart3,
+  Store, Palette, CreditCard, Truck, Globe, Check, ArrowRight, Sparkles
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAdminMerchant } from '../context/adminMerchantContext';
+import { useProducts } from '../context/productcontext';
 
 export default function Home() {
   const { merchantId, merchant, loading: merchantLoading } = useAdminMerchant();
+  const { products, loading: productsLoading } = useProducts();
   const [editingProduct, setEditingProduct] = useState(null);
   // NEW: State for the dropdown
   const [timeRange, setTimeRange] = useState('This Week');
@@ -18,6 +23,76 @@ export default function Home() {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [loadingRevenue, setLoadingRevenue] = useState(true);
   const navigate = useNavigate();
+
+  // Check if this is a new merchant that needs onboarding setup
+  // A merchant is considered "new" if they have no products yet
+  const isNewMerchant = !productsLoading && !merchantLoading && products.length === 0;
+
+  // Check completion status of each setup step
+  const hasStoreName = merchant?.store_name || merchant?.name || merchant?.business_name;
+  const hasProducts = products.length > 0;
+  const hasPaymentSetup = merchant?.paystack_public_key; // Check if any payment gateway is configured
+
+  // Setup steps configuration
+  const setupSteps = [
+    {
+      id: 'store-name',
+      title: 'Add store name',
+      description: 'Give your store a name that represents your brand',
+      icon: Store,
+      completed: !!hasStoreName,
+      action: () => navigate('/settings/general'),
+      gradient: 'from-blue-500 to-blue-600',
+    },
+    {
+      id: 'first-product',
+      title: 'Add your first product',
+      description: 'Start selling by adding products to your catalog',
+      icon: Package,
+      completed: hasProducts,
+      action: () => navigate('/products'),
+      gradient: 'from-purple-500 to-purple-600',
+    },
+    {
+      id: 'design-store',
+      title: 'Design your store',
+      description: 'Customize the look and feel of your storefront',
+      icon: Palette,
+      completed: false, // Can be enhanced to check if sections have been customized
+      action: () => navigate('/store/storefront-editor'),
+      gradient: 'from-pink-500 to-pink-600',
+    },
+    {
+      id: 'payments',
+      title: 'Set up Payments',
+      description: 'Connect a payment gateway to accept payments',
+      icon: CreditCard,
+      completed: !!hasPaymentSetup,
+      action: () => navigate('/settings/finance'),
+      gradient: 'from-green-500 to-green-600',
+    },
+    {
+      id: 'shipping',
+      title: 'Review your shipping rates',
+      description: 'Configure shipping options for your customers',
+      icon: Truck,
+      completed: false, // Can be enhanced to check shipping configuration
+      action: () => navigate('/settings/shipping'),
+      gradient: 'from-orange-500 to-orange-600',
+    },
+    {
+      id: 'domain',
+      title: 'Customize your domain',
+      description: 'Set up a custom domain for your store',
+      icon: Globe,
+      completed: false, // Can be enhanced to check domain configuration
+      action: () => navigate('/settings/manage-store'),
+      gradient: 'from-indigo-500 to-indigo-600',
+    },
+  ];
+
+  const completedSteps = setupSteps.filter(step => step.completed).length;
+  const progressPercentage = (completedSteps / setupSteps.length) * 100;
 
   // Fetch recent orders from Supabase - scoped to merchant
   useEffect(() => {
@@ -252,290 +327,399 @@ export default function Home() {
       {/* Header */}
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
 
-      {/* Sales Analytics Card */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        {/* Header with Title and Segmented Control */}
-        <div className="flex items-center justify-between mb-8">
-          {/* Title with Icon */}
-          <div className="flex items-center gap-2">
-            <BarChart3 size={20} className="text-[#111827]" />
-            <h2 className="text-[16px] font-semibold text-[#111827]">Sales</h2>
+      {/* NEW MERCHANT ONBOARDING SETUP WIZARD */}
+      {isNewMerchant ? (
+        <div className="space-y-6">
+          {/* Welcome Card */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 rounded-2xl shadow-xl p-8">
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
+
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <Sparkles className="text-yellow-300" size={24} />
+                </div>
+                <h2 className="text-2xl font-bold text-white">Welcome to your store!</h2>
+              </div>
+
+              <p className="text-purple-100 text-lg mb-6 max-w-2xl">
+                Let's get your store ready for customers. Complete these steps to start selling and make your first sale.
+              </p>
+
+              {/* Progress Bar */}
+              <div className="bg-white/20 rounded-full h-3 mb-3 overflow-hidden backdrop-blur-sm">
+                <div
+                  className="h-full bg-gradient-to-r from-yellow-300 to-orange-400 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${progressPercentage}%` }}
+                ></div>
+              </div>
+              <p className="text-white/80 text-sm font-medium">
+                {completedSteps} of {setupSteps.length} steps completed
+              </p>
+            </div>
           </div>
 
-          {/* Segmented Control Filter */}
-          <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
-            {['Today', 'This Week', 'Month', 'Year to Date'].map((option) => (
-              <button
-                key={option}
-                onClick={() => setTimeRange(option)}
-                className={`px-3 py-1.5 text-[13px] font-medium rounded-md transition-all ${timeRange === option
-                  ? 'bg-white text-[#111827] shadow-sm'
-                  : 'text-[#9CA3AF] hover:text-[#6B7280]'
-                  }`}
-              >
-                {option}
-              </button>
-            ))}
+          {/* Setup Steps Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {setupSteps.map((step, index) => {
+              const IconComponent = step.icon;
+              return (
+                <button
+                  key={step.id}
+                  onClick={step.action}
+                  className={`group relative bg-white rounded-xl border-2 p-5 text-left transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${step.completed
+                    ? 'border-green-200 bg-green-50/50'
+                    : 'border-gray-100 hover:border-purple-200'
+                    }`}
+                >
+                  {/* Step Number Badge */}
+                  <div className="absolute -top-2 -left-2 w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-xs font-bold text-gray-600">
+                    {index + 1}
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    {/* Icon Container */}
+                    <div className={`flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br ${step.gradient} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                      {step.completed ? (
+                        <Check className="text-white" size={24} />
+                      ) : (
+                        <IconComponent className="text-white" size={24} />
+                      )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`font-semibold text-gray-900 mb-1 flex items-center gap-2 ${step.completed ? 'line-through text-gray-500' : ''}`}>
+                        {step.title}
+                        {step.completed && (
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                            Done
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-sm text-gray-500 leading-snug">
+                        {step.description}
+                      </p>
+                    </div>
+
+                    {/* Arrow */}
+                    <ArrowRight
+                      className={`flex-shrink-0 text-gray-300 group-hover:text-purple-500 group-hover:translate-x-1 transition-all duration-300 ${step.completed ? 'opacity-50' : ''}`}
+                      size={20}
+                    />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Quick Tip Card */}
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-5">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 p-2 bg-amber-100 rounded-lg">
+                <Sparkles className="text-amber-600" size={20} />
+              </div>
+              <div>
+                <h4 className="font-semibold text-amber-900 mb-1">Pro Tip</h4>
+                <p className="text-amber-700 text-sm">
+                  Start by adding at least one product. Once you have a product in your catalog,
+                  you'll see your sales analytics and dashboard features appear here.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
+      ) : (
+        /* REGULAR DASHBOARD FOR ACTIVE MERCHANTS */
+        <>
+          {/* Sales Analytics Card */}
+          <div className="bg-white rounded-xl shadow-md p-6">
+            {/* Header with Title and Segmented Control */}
+            <div className="flex items-center justify-between mb-8">
+              {/* Title with Icon */}
+              <div className="flex items-center gap-2">
+                <BarChart3 size={20} className="text-[#111827]" />
+                <h2 className="text-[16px] font-semibold text-[#111827]">Sales</h2>
+              </div>
 
-        {/* CHART */}
-        {loadingRevenue ? (
-          <div className="flex items-center justify-center" style={{ height: 400 }}>
-            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              {/* Segmented Control Filter */}
+              <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
+                {['Today', 'This Week', 'Month', 'Year to Date'].map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => setTimeRange(option)}
+                    className={`px-3 py-1.5 text-[13px] font-medium rounded-md transition-all ${timeRange === option
+                      ? 'bg-white text-[#111827] shadow-sm'
+                      : 'text-[#9CA3AF] hover:text-[#6B7280]'
+                      }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* CHART */}
+            {loadingRevenue ? (
+              <div className="flex items-center justify-center" style={{ height: 400 }}>
+                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : revenueData.length === 0 ? (
+              <div className="flex items-center justify-center flex-col" style={{ height: 400 }}>
+                <TrendingUp className="text-gray-300 mb-3" size={48} />
+                <p className="text-gray-500">No revenue data available for this period</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart
+                  data={revenueData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  barCategoryGap="20%"
+                >
+                  {/* Gridlines - faint dashed horizontal lines */}
+                  <CartesianGrid
+                    strokeDasharray="5 5"
+                    stroke="#E5E7EB"
+                    vertical={false}
+                  />
+
+                  {/* X-Axis */}
+                  <XAxis
+                    dataKey="time"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                    dy={10}
+                  />
+
+                  {/* Y-Axis */}
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#9CA3AF', fontSize: 12, textAnchor: 'end' }}
+                    tickFormatter={(value) => {
+                      if (value >= 1000) return `${value / 1000}K`;
+                      return value;
+                    }}
+                    ticks={[0, 10000, 50000, 100000, 130000, 150000]}
+                    domain={[0, 150000]}
+                  />
+
+                  {/* Tooltip */}
+                  <Tooltip
+                    cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const total = payload[0].payload.total;
+                        return (
+                          <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+                            <p className="text-sm font-semibold text-gray-900">
+                              {formatCurrency(total)}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {payload[0].payload.time}
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+
+                  {/* Stacked Bars with gradients and rounded tops */}
+                  <defs>
+                    <linearGradient id="colorRevenue1" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#8B5CF6" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#A78BFA" stopOpacity={1} />
+                    </linearGradient>
+                    <linearGradient id="colorRevenue2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#EC4899" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#F472B6" stopOpacity={1} />
+                    </linearGradient>
+                  </defs>
+
+                  {/* Bottom segment of the bar */}
+                  <Bar
+                    dataKey="revenue1"
+                    stackId="a"
+                    fill="url(#colorRevenue1)"
+                    radius={[0, 0, 0, 0]}
+                    maxBarSize={32}
+                  />
+
+                  {/* Top segment of the bar with rounded top */}
+                  <Bar
+                    dataKey="revenue2"
+                    stackId="a"
+                    fill="url(#colorRevenue2)"
+                    radius={[8, 8, 0, 0]}
+                    maxBarSize={32}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
-        ) : revenueData.length === 0 ? (
-          <div className="flex items-center justify-center flex-col" style={{ height: 400 }}>
-            <TrendingUp className="text-gray-300 mb-3" size={48} />
-            <p className="text-gray-500">No revenue data available for this period</p>
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart
-              data={revenueData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-              barCategoryGap="20%"
-            >
-              {/* Gridlines - faint dashed horizontal lines */}
-              <CartesianGrid
-                strokeDasharray="5 5"
-                stroke="#E5E7EB"
-                vertical={false}
-              />
 
-              {/* X-Axis */}
-              <XAxis
-                dataKey="time"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                dy={10}
-              />
+          {/* Recent Activity & Table Row (1/3 + 2/3 split) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Recent Orders - 1/3 width */}
+            <div className="bg-white rounded-xl shadow-md p-6 lg:col-span-1">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Recent Orders</h3>
+                <button
+                  onClick={() => navigate('/orders')}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline"
+                >
+                  See All
+                </button>
+              </div>
 
-              {/* Y-Axis */}
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#9CA3AF', fontSize: 12, textAnchor: 'end' }}
-                tickFormatter={(value) => {
-                  if (value >= 1000) return `${value / 1000}K`;
-                  return value;
-                }}
-                ticks={[0, 10000, 50000, 100000, 130000, 150000]}
-                domain={[0, 150000]}
-              />
-
-              {/* Tooltip */}
-              <Tooltip
-                cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
-                content={({ active, payload }) => {
-                  if (active && payload && payload.length) {
-                    const total = payload[0].payload.total;
+              {loadingOrders ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : recentOrders.length === 0 ? (
+                <div className="text-center py-12">
+                  <ShoppingBag className="mx-auto text-gray-300 mb-3" size={48} />
+                  <p className="text-gray-500">No orders yet</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentOrders.slice(0, 4).map((order) => {
+                    const statusConfig = getStatusConfig(order.status);
                     return (
-                      <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
-                        <p className="text-sm font-semibold text-gray-900">
-                          {formatCurrency(total)}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {payload[0].payload.time}
-                        </p>
+                      <div
+                        key={order.id}
+                        onClick={() => navigate(`/orders/${order.id}`)}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all cursor-pointer group"
+                      >
+                        {/* Icon Container */}
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <ShoppingBag className="text-purple-600" size={20} />
+                        </div>
+
+                        {/* Text Content */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 text-sm">Order #{String(order.id || '').slice(0, 8)}</p>
+                          <p className="text-xs text-gray-500 truncate">{order.customer_name} • {getTimeAgo(order.created_at)}</p>
+                        </div>
+
+                        {/* Status Badge */}
+                        <span className={`text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap ${statusConfig.bg} ${statusConfig.text}`}>
+                          {statusConfig.label}
+                        </span>
                       </div>
                     );
-                  }
-                  return null;
-                }}
-              />
+                  })}
+                </div>
+              )}
+            </div>
 
-              {/* Stacked Bars with gradients and rounded tops */}
-              <defs>
-                <linearGradient id="colorRevenue1" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#8B5CF6" stopOpacity={1} />
-                  <stop offset="100%" stopColor="#A78BFA" stopOpacity={1} />
-                </linearGradient>
-                <linearGradient id="colorRevenue2" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#EC4899" stopOpacity={1} />
-                  <stop offset="100%" stopColor="#F472B6" stopOpacity={1} />
-                </linearGradient>
-              </defs>
+            {/* Top Products Table - 2/3 width */}
+            <div className="bg-white rounded-xl shadow-md p-6 lg:col-span-2">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Top Products</h3>
+                <div className="flex items-center gap-2">
+                  <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    Sort
+                  </button>
+                  <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    Filter
+                  </button>
+                </div>
+              </div>
 
-              {/* Bottom segment of the bar */}
-              <Bar
-                dataKey="revenue1"
-                stackId="a"
-                fill="url(#colorRevenue1)"
-                radius={[0, 0, 0, 0]}
-                maxBarSize={32}
-              />
-
-              {/* Top segment of the bar with rounded top */}
-              <Bar
-                dataKey="revenue2"
-                stackId="a"
-                fill="url(#colorRevenue2)"
-                radius={[8, 8, 0, 0]}
-                maxBarSize={32}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </div>
-
-      {/* Recent Activity & Table Row (1/3 + 2/3 split) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Orders - 1/3 width */}
-        <div className="bg-white rounded-xl shadow-md p-6 lg:col-span-1">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-900">Recent Orders</h3>
-            <button
-              onClick={() => navigate('/orders')}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline"
-            >
-              See All
-            </button>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Product</th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Stocks</th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Sales</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bestSellers.map((product, index) => (
+                      <tr
+                        key={product.id}
+                        className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                        style={{ height: '60px' }}
+                      >
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center text-xl flex-shrink-0">
+                              {product.icon}
+                            </div>
+                            <span className="font-medium text-gray-900 text-sm">{product.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="font-mono text-sm text-gray-700">{Math.floor(Math.random() * 500) + 50}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="font-mono text-sm text-gray-900 font-medium">
+                            {formatCurrency(Math.floor(Math.random() * 5000) + 500)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="font-mono text-sm text-gray-700">{product.unitsSold.toLocaleString()}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
-          {loadingOrders ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-          ) : recentOrders.length === 0 ? (
-            <div className="text-center py-12">
-              <ShoppingBag className="mx-auto text-gray-300 mb-3" size={48} />
-              <p className="text-gray-500">No orders yet</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {recentOrders.slice(0, 4).map((order) => {
-                const statusConfig = getStatusConfig(order.status);
-                return (
-                  <div
-                    key={order.id}
-                    onClick={() => navigate(`/orders/${order.id}`)}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all cursor-pointer group"
-                  >
-                    {/* Icon Container */}
-                    <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <ShoppingBag className="text-purple-600" size={20} />
-                    </div>
-
-                    {/* Text Content */}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 text-sm">Order #{String(order.id || '').slice(0, 8)}</p>
-                      <p className="text-xs text-gray-500 truncate">{order.customer_name} • {getTimeAgo(order.created_at)}</p>
-                    </div>
-
-                    {/* Status Badge */}
-                    <span className={`text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap ${statusConfig.bg} ${statusConfig.text}`}>
-                      {statusConfig.label}
-                    </span>
+          {/* Edit Modal (Stays inside Home because it edits Home data) */}
+          {editingProduct && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Edit Product</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Product Name
+                    </label>
+                    <input
+                      type="text"
+                      defaultValue={editingProduct.name}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
                   </div>
-                );
-              })}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Units Sold
+                    </label>
+                    <input
+                      type="number"
+                      defaultValue={editingProduct.unitsSold}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={closeModal}
+                      className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={closeModal}
+                      className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
-        </div>
-
-        {/* Top Products Table - 2/3 width */}
-        <div className="bg-white rounded-xl shadow-md p-6 lg:col-span-2">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-900">Top Products</h3>
-            <div className="flex items-center gap-2">
-              <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                Sort
-              </button>
-              <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                Filter
-              </button>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Product</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Stocks</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Sales</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bestSellers.map((product, index) => (
-                  <tr
-                    key={product.id}
-                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
-                    style={{ height: '60px' }}
-                  >
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center text-xl flex-shrink-0">
-                          {product.icon}
-                        </div>
-                        <span className="font-medium text-gray-900 text-sm">{product.name}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="font-mono text-sm text-gray-700">{Math.floor(Math.random() * 500) + 50}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="font-mono text-sm text-gray-900 font-medium">
-                        {formatCurrency(Math.floor(Math.random() * 5000) + 500)}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="font-mono text-sm text-gray-700">{product.unitsSold.toLocaleString()}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Edit Modal (Stays inside Home because it edits Home data) */}
-      {editingProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Edit Product</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Product Name
-                </label>
-                <input
-                  type="text"
-                  defaultValue={editingProduct.name}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Units Sold
-                </label>
-                <input
-                  type="number"
-                  defaultValue={editingProduct.unitsSold}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={closeModal}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={closeModal}
-                  className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        </>
       )}
 
     </div>

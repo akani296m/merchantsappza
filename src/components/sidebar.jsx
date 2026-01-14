@@ -6,6 +6,7 @@ import {
   Grid2X2, LogOut
 } from 'lucide-react';
 import { useAuth } from '../context/authContext';
+import { useAdminMerchant } from '../context/adminMerchantContext';
 
 // Custom Cart Icon component to match lucide-react icon API
 const CartIcon = ({ size = 20, strokeWidth, fill, ...props }) => (
@@ -26,6 +27,7 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const { user, signOut } = useAuth();
+  const { merchant } = useAdminMerchant();
 
   const toggleSubmenu = (menuKey) => {
     setExpandedMenus(prev => ({
@@ -69,6 +71,7 @@ export default function Sidebar() {
       hasSubmenu: true,
       children: [
         { name: 'Theme Editor', path: '/store/editor' },
+        { name: 'Product Templates', path: '/store/templates' },
         { name: 'Pages', path: '/store/pages' },
       ]
     },
@@ -237,31 +240,36 @@ export default function Sidebar() {
             <span className="text-[14px] font-medium">Log Out</span>
           </button>
 
-          {/* Premium Promo Card */}
-          <div className="bg-[#E5E7EB] rounded-2xl p-4 space-y-3">
-            {/* Trophy Icon */}
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-              <Trophy size={20} className="text-[#F59E0B]" />
-            </div>
-
-            {/* Headline */}
-            <div>
-              <div className="inline-block bg-blue-500 text-white text-[11px] font-semibold px-2 py-0.5 rounded-full mb-1">
-                Unlock
+          {/* Premium Promo Card - Only show for trial users or users without active subscription */}
+          {merchant && (!merchant.subscription_plan || merchant.subscription_plan === 'trial' || merchant.subscription_status !== 'active') && (
+            <div className="bg-[#E5E7EB] rounded-2xl p-4 space-y-3">
+              {/* Trophy Icon */}
+              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+                <Trophy size={20} className="text-[#F59E0B]" />
               </div>
-              <span className="text-[14px] font-semibold text-[#111827]"> Full Features</span>
+
+              {/* Headline */}
+              <div>
+                <div className="inline-block bg-blue-500 text-white text-[11px] font-semibold px-2 py-0.5 rounded-full mb-1">
+                  Unlock
+                </div>
+                <span className="text-[14px] font-semibold text-[#111827]"> Full Features</span>
+              </div>
+
+              {/* Body Copy */}
+              <p className="text-[12px] text-[#6B7280]">
+                You are currently in <span className="font-medium">trial mode</span>.
+              </p>
+
+              {/* CTA Button */}
+              <button
+                onClick={() => navigate('/settings/billing')}
+                className="w-full bg-black text-white text-[14px] font-medium py-2.5 rounded-full hover:bg-gray-900 transition-colors"
+              >
+                Upgrade Now
+              </button>
             </div>
-
-            {/* Body Copy */}
-            <p className="text-[12px] text-[#6B7280]">
-              You are currently in <span className="font-medium">trial mode</span>.
-            </p>
-
-            {/* CTA Button */}
-            <button className="w-full bg-black text-white text-[14px] font-medium py-2.5 rounded-full hover:bg-gray-900 transition-colors">
-              Upgrade Now
-            </button>
-          </div>
+          )}
         </div>
       </aside>
     </>

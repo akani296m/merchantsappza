@@ -4,7 +4,7 @@ import { Truck, ShieldCheck, ArrowLeft, Minus, Plus, Package, Loader2, Heart, Sh
 import { useMerchantProduct, useMerchantProducts } from '../hooks/useMerchantProducts';
 import { useCart } from '../../context/cartcontext';
 import { useMerchant } from '../context/MerchantContext';
-import { useSections } from '../../hooks/useSections';
+import { useProductTemplateSections } from '../../hooks/useProductTemplateSections';
 import SectionRenderer from '../../components/storefront/SectionRenderer';
 import { PAGE_TYPES } from '../../components/storefront/sections';
 
@@ -16,8 +16,11 @@ export default function ProductDetail() {
     const { products, loading: productsLoading } = useMerchantProducts();
     const { addToCart } = useCart();
 
-    // Fetch product-specific sections
-    const { sections, loading: sectionsLoading } = useSections(merchant?.id, PAGE_TYPES.PRODUCT);
+    // Fetch product-specific sections based on template_id or default
+    const { sections, loading: sectionsLoading } = useProductTemplateSections(
+        merchant?.id,
+        product?.template_id
+    );
 
     const [activeImage, setActiveImage] = useState(0);
     const [quantity, setQuantity] = useState(1);

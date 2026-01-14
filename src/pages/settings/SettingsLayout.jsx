@@ -31,6 +31,12 @@ export default function SettingsLayout() {
             description: 'Payment methods and billing'
         },
         {
+            name: 'Billing',
+            path: '/settings/billing',
+            icon: CreditCard,
+            description: 'Subscription plans and pricing'
+        },
+        {
             name: 'Manage Store',
             path: '/settings/manage-store',
             icon: Store,

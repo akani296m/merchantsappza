@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/authContext';
-import { Eye, EyeOff, Package } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -53,10 +53,7 @@ export default function Login() {
                 {/* Logo Lockup */}
                 <div className="mb-10">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-md flex items-center justify-center" style={{ backgroundColor: '#ffcd00' }}>
-                            <Package className="w-6 h-6" style={{ color: '#111827' }} />
-                        </div>
-                        <span className="text-xl font-semibold" style={{ color: '#111827' }}>SOLDT</span>
+                        <img src="/LOGOMAIN.svg" alt="SOLDT" className="h-10" />
                     </div>
                 </div>
 

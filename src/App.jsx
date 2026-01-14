@@ -24,6 +24,7 @@ import {
   SettingsLayout,
   GeneralSettings,
   FinanceSettings,
+  BillingSettings,
   ManageStoreSettings,
   OrdersNotificationsSettings,
   ShippingSettings,
@@ -33,6 +34,9 @@ import {
 
 // Storefront Editor
 import { StorefrontEditor } from './pages/storefront-editor';
+
+// Template Manager
+import { TemplateManager, TemplateEditor } from './pages/templates';
 
 // Storefront (new structure)
 import {
@@ -137,6 +141,10 @@ export default function App() {
         <Route path="/marketing/email" element={<div className="p-8"><h1 className="text-2xl font-bold mb-2">Email Marketing</h1><p className="text-gray-500">Connect with your customers via email. Feature coming soon.</p></div>} />
         <Route path="/marketing/facebook" element={<FacebookMarketing />} />
         <Route path="/marketing/tiktok" element={<div className="p-8"><h1 className="text-2xl font-bold mb-2">TikTok Marketing</h1><p className="text-gray-500">Create viral content on TikTok. Feature coming soon.</p></div>} />
+
+        {/* Template Manager */}
+        <Route path="/store/templates" element={<TemplateManager />} />
+        <Route path="/store/templates/:templateId/edit" element={<TemplateEditor />} />
       </Route>
 
       {/* =========================================== */}
@@ -226,6 +234,7 @@ export default function App() {
       }>
         <Route path="general" element={<GeneralSettings />} />
         <Route path="finance" element={<FinanceSettings />} />
+        <Route path="billing" element={<BillingSettings />} />
         <Route path="manage-store" element={<ManageStoreSettings />} />
         <Route path="orders-notifications" element={<OrdersNotificationsSettings />} />
         <Route path="shipping" element={<ShippingSettings />} />

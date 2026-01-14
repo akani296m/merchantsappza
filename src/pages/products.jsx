@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useProducts } from '../context/productcontext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Share2, Eye, Save, Plus, X, ChevronDown } from 'lucide-react';
+import { Share2, Eye, Save, Plus, X, ChevronDown, Layout } from 'lucide-react';
 import { uploadImage, deleteImage } from '../lib/uploadImage';
+import { useTemplates } from '../hooks/useTemplates';
 
 export default function ProductCreator() {
   const navigate = useNavigate();
@@ -21,8 +22,10 @@ export default function ProductCreator() {
   const [showPreview, setShowPreview] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
+  const [templateId, setTemplateId] = useState(''); // Product page template
 
   const { addProduct, editProduct: updateProduct } = useProducts();
+  const { templates, loading: templatesLoading } = useTemplates();
   const fileInputRef = useRef(null);
 
   const categories = ['Electronics', 'Fashion', 'Home & Garden', 'Beauty', 'Sports', 'Books', 'Toys'];
@@ -75,6 +78,9 @@ export default function ProductCreator() {
         }).filter(Boolean) // Remove any null entries
         : [];
       setImages(normalizedImages);
+
+      // Load template ID
+      setTemplateId(editProduct.template_id || '');
     }
   }, [editProduct]);
 
@@ -216,6 +222,7 @@ export default function ProductCreator() {
         inventory: (inventory === '' || inventory === null) ? null : Number(inventory),
         images: processedImageUrls, // Store as array of URL strings, not objects
         tags,
+        template_id: templateId || null, // Product page template
       };
 
       let result;
@@ -459,6 +466,53 @@ export default function ProductCreator() {
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* Product Page Template Section */}
+          <div className="pt-4 border-t border-gray-200">
+            <div className="flex items-center gap-2 mb-3">
+              <Layout size={18} className="text-purple-500" />
+              <label className="text-sm font-medium text-gray-700">
+                Product Page Template
+              </label>
+              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                Optional
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">
+              Choose a custom layout for this product's page. Leave as default to use the standard product page layout.
+            </p>
+            <div className="relative">
+              <select
+                value={templateId}
+                onChange={(e) => setTemplateId(e.target.value)}
+                disabled={templatesLoading}
+                className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white disabled:bg-gray-50 disabled:cursor-wait"
+              >
+                <option value="">Default Template</option>
+                {templates.map(template => (
+                  <option key={template.id} value={template.id}>
+                    {template.name} {template.is_default ? '(Store Default)' : ''}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={18} className="absolute right-3 top-3 text-gray-400 pointer-events-none" />
+            </div>
+            {templates.length === 0 && !templatesLoading && (
+              <p className="text-xs text-gray-400 mt-2">
+                No custom templates yet.{' '}
+                <a
+                  href="/store/templates"
+                  className="text-purple-600 hover:underline"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/store/templates');
+                  }}
+                >
+                  Create one
+                </a>
+              </p>
+            )}
           </div>
         </div>
       </div>
