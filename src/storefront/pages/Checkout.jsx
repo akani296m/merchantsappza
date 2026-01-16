@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { ShoppingBag, ArrowLeft, Lock, AlertCircle } from 'lucide-react';
 import PaystackPop from '@paystack/inline-js';
+import { WhopCheckoutEmbed } from '@whop/checkout/react';
 import { useCart } from '../../context/cartcontext';
 import { useMerchant } from '../context/MerchantContext';
 import { supabase } from '../../lib/supabase';
@@ -62,6 +63,22 @@ export default function Checkout() {
             icon: '💳'
         });
     }
+    if (merchant?.whop_plan_id) {
+        availableGateways.push({
+            id: 'whop',
+            name: 'Whop',
+            description: 'Pay with cards, Apple Pay, Google Pay, or crypto',
+            icon: '🌐'
+        });
+    }
+    if (merchant?.eft_enabled && merchant?.eft_bank_name && merchant?.eft_account_number) {
+        availableGateways.push({
+            id: 'manual_eft',
+            name: 'Manual EFT / Bank Transfer',
+            description: 'Pay directly via bank transfer using the provided banking details',
+            icon: '🏦'
+        });
+    }
 
     // Default to first available gateway
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
@@ -71,7 +88,7 @@ export default function Checkout() {
         if (availableGateways.length > 0 && !selectedPaymentMethod) {
             setSelectedPaymentMethod(availableGateways[0].id);
         }
-    }, [merchant?.paystack_public_key, merchant?.yoco_secret_key]);
+    }, [merchant?.paystack_public_key, merchant?.yoco_secret_key, merchant?.whop_plan_id, merchant?.eft_enabled]);
 
     useEffect(() => {
         if (cartItems.length === 0 && !isCompletingOrder.current) {
@@ -269,6 +286,108 @@ export default function Checkout() {
         }
     };
 
+    // Handle successful Whop payment completion
+    const handleWhopComplete = async (planId, receiptId) => {
+        isCompletingOrder.current = true;
+        setLoading(true);
+
+        try {
+            const orderData = {
+                merchant_id: merchant?.id,
+                customer_email: formData.email,
+                customer_name: `${formData.firstName} ${formData.lastName}`,
+                customer_phone: formData.phone,
+                shipping_address: {
+                    address: formData.address,
+                    city: formData.city,
+                    province: formData.province,
+                    postalCode: formData.postalCode
+                },
+                items: cartItems.map(item => ({
+                    product_id: item.id,
+                    title: item.title,
+                    quantity: item.quantity,
+                    price: item.price,
+                    subtotal: item.price * item.quantity
+                })),
+                subtotal,
+                shipping,
+                tax,
+                total,
+                status: 'processing',
+                payment_status: 'paid',
+                payment_reference: receiptId,
+                payment_method: 'whop',
+                notes: formData.orderNotes || null,
+                created_at: new Date().toISOString()
+            };
+
+            const { data, error } = await supabase.from('orders').insert([orderData]).select().single();
+            if (error) throw error;
+
+            clearCart();
+            navigate(`${basePath}/order-confirmation/${data.id}`, {
+                state: { orderId: data.id, orderData: data }
+            });
+        } catch (error) {
+            console.error('Error creating order:', error);
+            alert('Payment successful but order creation failed. Please contact support with receipt: ' + receiptId);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Handle Manual EFT order creation
+    const handleManualEFTOrder = async () => {
+        isCompletingOrder.current = true;
+        setLoading(true);
+
+        try {
+            const orderData = {
+                merchant_id: merchant?.id,
+                customer_email: formData.email,
+                customer_name: `${formData.firstName} ${formData.lastName}`,
+                customer_phone: formData.phone,
+                shipping_address: {
+                    address: formData.address,
+                    city: formData.city,
+                    province: formData.province,
+                    postalCode: formData.postalCode
+                },
+                items: cartItems.map(item => ({
+                    product_id: item.id,
+                    title: item.title,
+                    quantity: item.quantity,
+                    price: item.price,
+                    subtotal: item.price * item.quantity
+                })),
+                subtotal,
+                shipping,
+                tax,
+                total,
+                status: 'pending',
+                payment_status: 'awaiting_payment',
+                payment_reference: `EFT-${Date.now()}`,
+                payment_method: 'manual_eft',
+                notes: formData.orderNotes || null,
+                created_at: new Date().toISOString()
+            };
+
+            const { data, error } = await supabase.from('orders').insert([orderData]).select().single();
+            if (error) throw error;
+
+            clearCart();
+            navigate(`${basePath}/order-confirmation/${data.id}`, {
+                state: { orderId: data.id, orderData: data, isManualEFT: true }
+            });
+        } catch (error) {
+            console.error('Error creating order:', error);
+            alert('There was an error creating your order. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -290,6 +409,12 @@ export default function Checkout() {
             return;
         }
 
+        // Whop uses embedded checkout - no form submit needed
+        if (selectedPaymentMethod === 'whop') {
+            alert('Please complete your payment using the Whop checkout form below.');
+            return;
+        }
+
         setLoading(true);
 
         // Validate cart items still exist before processing payment
@@ -307,7 +432,9 @@ export default function Checkout() {
         }
 
         // Process payment based on customer's selected method
-        if (selectedPaymentMethod === 'yoco') {
+        if (selectedPaymentMethod === 'manual_eft') {
+            await handleManualEFTOrder();
+        } else if (selectedPaymentMethod === 'yoco') {
             await handleYocoPayment();
         } else if (selectedPaymentMethod === 'paystack') {
             try {
@@ -412,8 +539,8 @@ export default function Checkout() {
                                             <label
                                                 key={gateway.id}
                                                 className={`flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedPaymentMethod === gateway.id
-                                                        ? 'border-blue-500 bg-blue-50/50'
-                                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                                    ? 'border-blue-500 bg-blue-50/50'
+                                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                                     }`}
                                             >
                                                 <input
@@ -444,15 +571,33 @@ export default function Checkout() {
                                                                     <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
                                                                     Credit & Debit Cards
                                                                 </span>
-                                                                <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
-                                                                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                                                                    Bank Transfer
-                                                                </span>
+                                                                {gateway.id !== 'whop' && (
+                                                                    <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                                                                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                                                                        Bank Transfer
+                                                                    </span>
+                                                                )}
                                                                 {gateway.id === 'paystack' && (
                                                                     <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
                                                                         <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
                                                                         Mobile Money
                                                                     </span>
+                                                                )}
+                                                                {gateway.id === 'whop' && (
+                                                                    <>
+                                                                        <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                                                                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                                                                            Apple Pay
+                                                                        </span>
+                                                                        <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                                                                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                                                                            Google Pay
+                                                                        </span>
+                                                                        <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                                                                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                                                                            Crypto
+                                                                        </span>
+                                                                    </>
                                                                 )}
                                                             </div>
                                                         </div>
@@ -471,6 +616,125 @@ export default function Checkout() {
                                     </div>
                                 )}
                             </div>
+
+                            {/* Whop Checkout Embed - Shows when Whop is selected */}
+                            {selectedPaymentMethod === 'whop' && merchant?.whop_plan_id && (
+                                <div className="bg-white rounded-lg p-6 shadow-sm">
+                                    <h2 className="text-xl font-bold mb-4">Complete Payment</h2>
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        Fill in the form above, then complete your payment below. Your order will be processed once payment is confirmed.
+                                    </p>
+                                    <div className="border border-gray-200 rounded-lg overflow-hidden" style={{ minHeight: '400px' }}>
+                                        <WhopCheckoutEmbed
+                                            planId={merchant.whop_plan_id}
+                                            theme="light"
+                                            prefill={{ email: formData.email || undefined }}
+                                            hideEmail={!!formData.email}
+                                            onComplete={(planId, receiptId) => handleWhopComplete(planId, receiptId)}
+                                            fallback={
+                                                <div className="flex items-center justify-center h-64">
+                                                    <div className="text-center">
+                                                        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                                                        <p className="text-gray-500 text-sm">Loading payment form...</p>
+                                                    </div>
+                                                </div>
+                                            }
+                                        />
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-3 text-center">
+                                        Powered by Whop • Secure payment processing
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Manual EFT Banking Details - Shows when Manual EFT is selected */}
+                            {selectedPaymentMethod === 'manual_eft' && merchant?.eft_enabled && (
+                                <div className="bg-white rounded-lg p-6 shadow-sm">
+                                    <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                                        <span className="text-2xl">🏦</span>
+                                        Bank Transfer Details
+                                    </h2>
+
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        Please make a payment to the following bank account and send your Proof of Payment (PoP) to the seller.
+                                    </p>
+
+                                    {/* Banking Details Card */}
+                                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 mb-4">
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                                                <span className="text-sm text-gray-500">Bank Name</span>
+                                                <span className="font-semibold text-gray-900">{merchant.eft_bank_name}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                                                <span className="text-sm text-gray-500">Account Holder</span>
+                                                <span className="font-semibold text-gray-900">{merchant.eft_account_holder}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                                                <span className="text-sm text-gray-500">Account Number</span>
+                                                <span className="font-mono font-semibold text-gray-900">{merchant.eft_account_number}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                                                <span className="text-sm text-gray-500">Branch Code</span>
+                                                <span className="font-mono font-semibold text-gray-900">{merchant.eft_branch_code}</span>
+                                            </div>
+                                            {merchant.eft_account_type && (
+                                                <div className="flex justify-between items-center py-2">
+                                                    <span className="text-sm text-gray-500">Account Type</span>
+                                                    <span className="font-semibold text-gray-900 capitalize">{merchant.eft_account_type}</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Reference to use */}
+                                        <div className="mt-4 pt-4 border-t border-gray-200">
+                                            <p className="text-sm text-gray-500 mb-1">Use this reference for your payment:</p>
+                                            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 flex items-center justify-between">
+                                                <span className="font-mono font-bold text-blue-700">
+                                                    {formData.firstName ? `${formData.firstName.toUpperCase().slice(0, 3)}${formData.lastName ? formData.lastName.toUpperCase().slice(0, 3) : ''}` : 'YOUR NAME'}-{Math.random().toString(36).substring(2, 7).toUpperCase()}
+                                                </span>
+                                                <span className="text-xs text-blue-600">Copy this!</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Amount to Pay */}
+                                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-medium text-green-800">Amount to Pay:</span>
+                                            <span className="text-2xl font-bold text-green-700">R {formatCurrency(total)}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Warning Box */}
+                                    <div className="bg-amber-50 border-l-4 border-amber-400 rounded-lg p-4">
+                                        <div className="flex items-start gap-3">
+                                            <AlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={20} />
+                                            <div>
+                                                <p className="font-semibold text-amber-800 mb-2">Important: Don't forget to send your Proof of Payment!</p>
+                                                <ul className="text-sm text-amber-700 space-y-1.5">
+                                                    <li className="flex items-start gap-2">
+                                                        <span className="text-amber-500 mt-0.5">•</span>
+                                                        <span>After making your payment, <strong>send your PoP (Proof of Payment)</strong> to the seller via email or WhatsApp.</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-2">
+                                                        <span className="text-amber-500 mt-0.5">•</span>
+                                                        <span>Your order will only be processed once payment is verified.</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-2">
+                                                        <span className="text-red-500 mt-0.5">⚠️</span>
+                                                        <span className="text-red-700"><strong>Orders without PoP may be cancelled after 48 hours.</strong></span>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <p className="text-xs text-gray-500 mt-4 text-center">
+                                        Your order will be created with "Awaiting Payment" status
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="lg:col-span-1">
@@ -496,9 +760,20 @@ export default function Checkout() {
                                     <div className="flex justify-between text-gray-600"><span>VAT (15%)</span><span>R {formatCurrency(tax)}</span></div>
                                     <div className="border-t pt-3"><div className="flex justify-between text-lg font-bold"><span>Total</span><span>R {formatCurrency(total)}</span></div></div>
                                 </div>
-                                <button type="submit" disabled={loading} className="w-full bg-black text-white font-bold py-4 rounded-lg hover:bg-gray-800 disabled:bg-gray-400 flex items-center justify-center gap-2">
-                                    {loading ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Processing...</> : <><Lock size={18} /> Complete Order</>}
-                                </button>
+                                {selectedPaymentMethod === 'whop' ? (
+                                    <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-4 rounded-lg text-center flex items-center justify-center gap-2">
+                                        <span className="text-lg">🌐</span>
+                                        <span>Complete payment in the Whop checkout above</span>
+                                    </div>
+                                ) : selectedPaymentMethod === 'manual_eft' ? (
+                                    <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white font-bold py-4 rounded-lg hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-400 flex items-center justify-center gap-2">
+                                        {loading ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Creating Order...</> : <><span className="text-lg">🏦</span> Place Order & Pay via EFT</>}
+                                    </button>
+                                ) : (
+                                    <button type="submit" disabled={loading} className="w-full bg-black text-white font-bold py-4 rounded-lg hover:bg-gray-800 disabled:bg-gray-400 flex items-center justify-center gap-2">
+                                        {loading ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Processing...</> : <><Lock size={18} /> Complete Order</>}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

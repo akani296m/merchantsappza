@@ -73,6 +73,7 @@ export default function Sidebar() {
         { name: 'Theme Editor', path: '/store/editor' },
         { name: 'Product Templates', path: '/store/templates' },
         { name: 'Pages', path: '/store/pages' },
+        { name: 'Navigation', path: '/store/navigation' },
       ]
     },
   ];

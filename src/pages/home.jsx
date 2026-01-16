@@ -494,17 +494,27 @@ export default function Home() {
                     dy={10}
                   />
 
-                  {/* Y-Axis */}
+                  {/* Y-Axis - Auto-scales based on data */}
                   <YAxis
                     axisLine={false}
                     tickLine={false}
                     tick={{ fill: '#9CA3AF', fontSize: 12, textAnchor: 'end' }}
                     tickFormatter={(value) => {
-                      if (value >= 1000) return `${value / 1000}K`;
+                      if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+                      if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
                       return value;
                     }}
-                    ticks={[0, 10000, 50000, 100000, 130000, 150000]}
-                    domain={[0, 150000]}
+                    domain={[0, (dataMax) => {
+                      // Add 20% padding above the max value for visual breathing room
+                      const maxWithPadding = dataMax * 1.2;
+                      // Round to a nice number based on magnitude
+                      if (maxWithPadding <= 100) return Math.ceil(maxWithPadding / 10) * 10;
+                      if (maxWithPadding <= 1000) return Math.ceil(maxWithPadding / 100) * 100;
+                      if (maxWithPadding <= 10000) return Math.ceil(maxWithPadding / 1000) * 1000;
+                      if (maxWithPadding <= 100000) return Math.ceil(maxWithPadding / 10000) * 10000;
+                      return Math.ceil(maxWithPadding / 50000) * 50000;
+                    }]}
+                    allowDataOverflow={false}
                   />
 
                   {/* Tooltip */}

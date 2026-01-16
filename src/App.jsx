@@ -18,6 +18,7 @@ import Login from './pages/login';
 import Signup from './pages/signup';
 import FacebookMarketing from './pages/marketing/Facebook';
 import Pages from './pages/store/Pages';
+import Navigation from './pages/store/Navigation';
 
 // Settings Pages
 import {
@@ -218,6 +219,17 @@ export default function App() {
         <ProtectedRoute>
           <RequireMerchant>
             <Pages />
+          </RequireMerchant>
+        </ProtectedRoute>
+      } />
+
+      {/* =========================================== */}
+      {/* NAVIGATION SETTINGS (Protected + Merchant) */}
+      {/* =========================================== */}
+      <Route path="/store/navigation" element={
+        <ProtectedRoute>
+          <RequireMerchant>
+            <Navigation />
           </RequireMerchant>
         </ProtectedRoute>
       } />

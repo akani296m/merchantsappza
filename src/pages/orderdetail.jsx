@@ -1,8 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Package, Truck, CheckCircle, Clock, MapPin, CreditCard, User, XCircle, Loader2, Save } from 'lucide-react';
+import { ArrowLeft, Package, Truck, CheckCircle, Clock, MapPin, CreditCard, User, XCircle, Loader2, Save, AlertCircle, DollarSign, ExternalLink, Copy, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAdminMerchant } from '../context/adminMerchantContext';
+
+// South African courier services
+const COURIER_SERVICES = [
+    'The Courier Guy',
+    'RAM Hand to Hand',
+    'DHL',
+    'FedEx',
+    'Aramex',
+    'PostNet',
+    'Pargo',
+    'Fastway Couriers',
+    'Dawn Wing',
+    'Other',
+];
 
 export default function OrderDetail() {
     const { id } = useParams();
@@ -12,6 +26,17 @@ export default function OrderDetail() {
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState('');
+
+    // Tracking number state
+    const [trackingNumber, setTrackingNumber] = useState('');
+    const [trackingCarrier, setTrackingCarrier] = useState('');
+    const [trackingUrl, setTrackingUrl] = useState('');
+    const [savingTracking, setSavingTracking] = useState(false);
+    const [trackingSaved, setTrackingSaved] = useState(false);
+
+    // Payment status state
+    const [updatingPayment, setUpdatingPayment] = useState(false);
+    const [copiedRef, setCopiedRef] = useState(false);
 
     // Fetch order from Supabase - scoped to merchant
     useEffect(() => {
@@ -36,6 +61,11 @@ export default function OrderDetail() {
                 if (error) throw error;
                 setOrder(data);
                 setSelectedStatus(data.status);
+
+                // Initialize tracking data
+                setTrackingNumber(data.tracking_number || '');
+                setTrackingCarrier(data.tracking_carrier || '');
+                setTrackingUrl(data.tracking_url || '');
             } catch (error) {
                 console.error('Error fetching order:', error);
             } finally {
@@ -129,6 +159,126 @@ export default function OrderDetail() {
         } finally {
             setUpdating(false);
         }
+    };
+
+    // Handle saving tracking information
+    const handleSaveTracking = async () => {
+        if (!merchantId) {
+            alert('Unable to update - merchant not identified');
+            return;
+        }
+
+        try {
+            setSavingTracking(true);
+            const { error } = await supabase
+                .from('orders')
+                .update({
+                    tracking_number: trackingNumber.trim() || null,
+                    tracking_carrier: trackingCarrier || null,
+                    tracking_url: trackingUrl.trim() || null,
+                })
+                .eq('id', id)
+                .eq('merchant_id', merchantId);
+
+            if (error) throw error;
+
+            setOrder({
+                ...order,
+                tracking_number: trackingNumber.trim() || null,
+                tracking_carrier: trackingCarrier || null,
+                tracking_url: trackingUrl.trim() || null,
+            });
+
+            setTrackingSaved(true);
+            setTimeout(() => setTrackingSaved(false), 3000);
+        } catch (error) {
+            console.error('Error saving tracking info:', error);
+            alert('Failed to save tracking information');
+        } finally {
+            setSavingTracking(false);
+        }
+    };
+
+    // Handle marking EFT order as paid
+    const handleMarkAsPaid = async () => {
+        if (!merchantId) {
+            alert('Unable to update - merchant not identified');
+            return;
+        }
+
+        const confirmPaid = window.confirm(
+            'Are you sure you want to mark this order as PAID?\n\nOnly do this after you have verified the Proof of Payment (PoP) from the customer.'
+        );
+
+        if (!confirmPaid) return;
+
+        try {
+            setUpdatingPayment(true);
+            const { error } = await supabase
+                .from('orders')
+                .update({
+                    payment_status: 'paid',
+                    status: order.status === 'pending' ? 'processing' : order.status, // Auto-advance to processing if pending
+                })
+                .eq('id', id)
+                .eq('merchant_id', merchantId);
+
+            if (error) throw error;
+
+            setOrder({
+                ...order,
+                payment_status: 'paid',
+                status: order.status === 'pending' ? 'processing' : order.status,
+            });
+            setSelectedStatus(order.status === 'pending' ? 'processing' : order.status);
+
+            alert('Order has been marked as PAID! ✓');
+        } catch (error) {
+            console.error('Error marking order as paid:', error);
+            alert('Failed to update payment status');
+        } finally {
+            setUpdatingPayment(false);
+        }
+    };
+
+    // Copy payment reference to clipboard
+    const copyPaymentRef = () => {
+        if (order.payment_reference) {
+            navigator.clipboard.writeText(order.payment_reference);
+            setCopiedRef(true);
+            setTimeout(() => setCopiedRef(false), 2000);
+        }
+    };
+
+    // Get payment status configuration
+    const getPaymentStatusConfig = (status) => {
+        const configs = {
+            'paid': {
+                bg: 'bg-green-100',
+                text: 'text-green-700',
+                label: 'Paid',
+                icon: CheckCircle,
+            },
+            'awaiting_payment': {
+                bg: 'bg-amber-100',
+                text: 'text-amber-700',
+                label: 'Awaiting Payment',
+                icon: Clock,
+            },
+            'pending': {
+                bg: 'bg-yellow-100',
+                text: 'text-yellow-700',
+                label: 'Pending',
+                icon: Clock,
+            },
+            'failed': {
+                bg: 'bg-red-100',
+                text: 'text-red-700',
+                label: 'Failed',
+                icon: XCircle,
+            },
+        };
+        return configs[status] || configs['pending'];
     };
 
     if (loading) {
@@ -275,19 +425,200 @@ export default function OrderDetail() {
                             <CreditCard className="text-blue-500" size={20} />
                             Payment Information
                         </h2>
-                        <div className="space-y-2">
-                            <div className="flex justify-between">
-                                <span className="text-gray-600">Payment Status:</span>
-                                <span className={`font-medium ${order.payment_status === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}>
-                                    {order.payment_status === 'paid' ? 'Paid' : 'Pending'}
+                        <div className="space-y-3">
+                            {/* Payment Status Badge */}
+                            <div className="flex items-center justify-between">
+                                <span className="text-gray-600">Status:</span>
+                                {(() => {
+                                    const paymentConfig = getPaymentStatusConfig(order.payment_status);
+                                    const PaymentIcon = paymentConfig.icon;
+                                    return (
+                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${paymentConfig.bg} ${paymentConfig.text}`}>
+                                            <PaymentIcon size={14} />
+                                            {paymentConfig.label}
+                                        </span>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* Payment Method */}
+                            <div className="flex items-center justify-between">
+                                <span className="text-gray-600">Method:</span>
+                                <span className="font-medium text-gray-900 capitalize">
+                                    {order.payment_method === 'manual_eft' ? '🏦 Manual EFT' :
+                                        order.payment_method === 'paystack' ? '💳 Paystack' :
+                                            order.payment_method === 'yoco' ? '💳 Yoco' :
+                                                order.payment_method === 'whop' ? '🌐 Whop' :
+                                                    order.payment_method || 'Unknown'}
                                 </span>
                             </div>
+
+                            {/* Payment Reference */}
+                            {order.payment_reference && (
+                                <div className="flex items-center justify-between">
+                                    <span className="text-gray-600">Reference:</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-mono text-sm text-gray-700">{order.payment_reference}</span>
+                                        <button
+                                            onClick={copyPaymentRef}
+                                            className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                            title="Copy reference"
+                                        >
+                                            {copiedRef ? <Check size={14} className="text-green-600" /> : <Copy size={14} className="text-gray-400" />}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Mark as Paid Button for EFT orders */}
+                            {order.payment_method === 'manual_eft' && order.payment_status === 'awaiting_payment' && (
+                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                                        <div className="flex items-start gap-3">
+                                            <AlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={18} />
+                                            <div className="text-sm text-amber-800">
+                                                <p className="font-medium mb-1">Awaiting Proof of Payment</p>
+                                                <p>This order was placed with Manual EFT. Mark it as paid once you've received and verified the customer's PoP.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleMarkAsPaid}
+                                        disabled={updatingPayment}
+                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                    >
+                                        {updatingPayment ? (
+                                            <>
+                                                <Loader2 size={18} className="animate-spin" />
+                                                Updating...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <DollarSign size={18} />
+                                                PoP Received - Mark as Paid
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Order Notes */}
                             {order.notes && (
                                 <div className="mt-4 pt-4 border-t">
                                     <p className="text-sm font-medium text-gray-700 mb-2">Order Notes:</p>
-                                    <p className="text-gray-600">{order.notes}</p>
+                                    <p className="text-gray-600 text-sm">{order.notes}</p>
                                 </div>
                             )}
+                        </div>
+                    </div>
+
+                    {/* Tracking Information */}
+                    <div className="bg-white rounded-xl shadow-md p-6">
+                        <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <Truck className="text-blue-500" size={20} />
+                            Tracking Information
+                        </h2>
+
+                        <div className="space-y-4">
+                            {/* Display existing tracking if available */}
+                            {order.tracking_number && !savingTracking && !trackingSaved && (
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <CheckCircle size={16} className="text-green-600" />
+                                        <span className="font-medium text-green-800">Tracking Added</span>
+                                    </div>
+                                    <p className="text-sm text-green-700">
+                                        <strong>{order.tracking_carrier}:</strong> {order.tracking_number}
+                                    </p>
+                                    {order.tracking_url && (
+                                        <a
+                                            href={order.tracking_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1 text-sm text-green-600 hover:text-green-700 mt-2"
+                                        >
+                                            Track Shipment <ExternalLink size={14} />
+                                        </a>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Courier Selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Courier Service
+                                </label>
+                                <select
+                                    value={trackingCarrier}
+                                    onChange={(e) => setTrackingCarrier(e.target.value)}
+                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                                >
+                                    <option value="">Select courier...</option>
+                                    {COURIER_SERVICES.map(courier => (
+                                        <option key={courier} value={courier}>{courier}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Tracking Number */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Tracking Number
+                                </label>
+                                <input
+                                    type="text"
+                                    value={trackingNumber}
+                                    onChange={(e) => setTrackingNumber(e.target.value)}
+                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-mono text-sm"
+                                    placeholder="e.g., TCG12345678"
+                                />
+                            </div>
+
+                            {/* Tracking URL (optional) */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Tracking URL <span className="text-gray-400 font-normal">(optional)</span>
+                                </label>
+                                <input
+                                    type="url"
+                                    value={trackingUrl}
+                                    onChange={(e) => setTrackingUrl(e.target.value)}
+                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                                    placeholder="https://tracking.courier.com/..."
+                                />
+                            </div>
+
+                            {/* Save Button */}
+                            <div className="flex items-center gap-3 pt-2">
+                                <button
+                                    onClick={handleSaveTracking}
+                                    disabled={savingTracking || (!trackingNumber && !trackingCarrier)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium"
+                                >
+                                    {savingTracking ? (
+                                        <>
+                                            <Loader2 size={16} className="animate-spin" />
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save size={16} />
+                                            Save Tracking
+                                        </>
+                                    )}
+                                </button>
+
+                                {trackingSaved && (
+                                    <span className="flex items-center gap-1 text-green-600 text-sm font-medium">
+                                        <CheckCircle size={16} />
+                                        Saved!
+                                    </span>
+                                )}
+                            </div>
+
+                            <p className="text-xs text-gray-500 mt-2">
+                                💡 Tip: Adding tracking info helps customers track their orders. Consider updating the order status to "Shipped" when you add tracking.
+                            </p>
                         </div>
                     </div>
                 </div>

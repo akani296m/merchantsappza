@@ -56,19 +56,7 @@ export function AdminMerchantProvider({ children }) {
                 .select(`
                     role,
                     merchant_id,
-                    merchants (
-                        id,
-                        name,
-                        store_name,
-                        business_name,
-                        slug,
-                        logo_url,
-                        created_at,
-                        paystack_public_key,
-                        facebook_pixel_id,
-                        subscription_plan,
-                        subscription_status
-                    )
+                    merchants (*)
                 `)
                 .eq('user_id', user.id)
                 .limit(1)

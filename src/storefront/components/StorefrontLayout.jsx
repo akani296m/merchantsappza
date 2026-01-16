@@ -1,9 +1,36 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Outlet, Link, useParams } from 'react-router-dom';
 import { Search, Loader2 } from 'lucide-react';
 import { useCart } from '../../context/cartcontext';
 import { MerchantProvider, useMerchant } from '../context/MerchantContext';
 import StorefrontNotFound from './StorefrontNotFound';
+
+// Default menu items (used as fallback when no config is saved)
+const DEFAULT_HEADER_ITEMS = [
+    { id: 'home', label: 'Home', path: '/', enabled: true, order: 0 },
+    { id: 'products', label: 'Catalog', path: '/products', enabled: true, order: 1 },
+];
+
+const DEFAULT_FOOTER_ITEMS = [
+    // Shop section
+    { id: 'new_arrivals', label: 'New Arrivals', section: 'Shop', path: '/products', enabled: true, order: 0 },
+    { id: 'all_products', label: 'All Products', section: 'Shop', path: '/products', enabled: true, order: 1 },
+    // Support section
+    { id: 'shipping', label: 'Shipping Policy', section: 'Support', path: '/shipping', enabled: true, order: 2 },
+    { id: 'privacy', label: 'Privacy Policy', section: 'Support', path: '/privacy', enabled: true, order: 3 },
+];
+
+/**
+ * Helper function to build the correct path for menu items
+ */
+function buildMenuPath(basePath, itemPath) {
+    // Handle root path
+    if (itemPath === '/') {
+        return basePath || '/';
+    }
+    // Combine basePath with itemPath
+    return `${basePath}${itemPath}`;
+}
 
 /**
  * Inner layout component that uses the merchant context
@@ -12,6 +39,49 @@ function StorefrontLayoutInner() {
     const { getTotalItems } = useCart();
     const { merchant, merchantSlug, loading, notFound, isCustomDomain } = useMerchant();
     const cartCount = getTotalItems();
+
+    // Parse menu configuration with fallbacks
+    const { headerItems, footerSections } = useMemo(() => {
+        let headerConfig = DEFAULT_HEADER_ITEMS;
+        let footerConfig = DEFAULT_FOOTER_ITEMS;
+
+        if (merchant?.menu_config) {
+            const config = typeof merchant.menu_config === 'string'
+                ? JSON.parse(merchant.menu_config)
+                : merchant.menu_config;
+
+            if (config.header && config.header.length > 0) {
+                headerConfig = config.header;
+            }
+            if (config.footer && config.footer.length > 0) {
+                footerConfig = config.footer;
+            }
+        }
+
+        // Filter enabled items and sort by order
+        const enabledHeaderItems = headerConfig
+            .filter(item => item.enabled)
+            .sort((a, b) => a.order - b.order);
+
+        // Group footer items by section
+        const enabledFooterItems = footerConfig.filter(item => item.enabled);
+        const sections = enabledFooterItems.reduce((acc, item) => {
+            const section = item.section || 'Other';
+            if (!acc[section]) acc[section] = [];
+            acc[section].push(item);
+            return acc;
+        }, {});
+
+        // Sort items within each section
+        Object.keys(sections).forEach(key => {
+            sections[key].sort((a, b) => a.order - b.order);
+        });
+
+        return {
+            headerItems: enabledHeaderItems,
+            footerSections: sections,
+        };
+    }, [merchant?.menu_config]);
 
     // Show loading state while fetching merchant
     if (loading) {
@@ -53,10 +123,17 @@ function StorefrontLayoutInner() {
                         )}
                     </Link>
 
-                    {/* Desktop Links */}
+                    {/* Desktop Links - Dynamic from menu config */}
                     <div className="hidden md:flex items-center space-x-8 text-sm font-medium">
-                        <Link to={basePath || '/'} className="hover:text-gray-500 transition">Home</Link>
-                        <Link to={`${basePath}/products`} className="hover:text-gray-500 transition">Catalog</Link>
+                        {headerItems.map((item) => (
+                            <Link
+                                key={item.id}
+                                to={buildMenuPath(basePath, item.path)}
+                                className="hover:text-gray-500 transition"
+                            >
+                                {item.label}
+                            </Link>
+                        ))}
                     </div>
 
                     {/* Icons */}
@@ -83,24 +160,32 @@ function StorefrontLayoutInner() {
             {/* --- STORE FOOTER --- */}
             <footer className="bg-gray-50 border-t border-gray-200 pt-16 pb-8">
                 <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                    {/* Store Info Column */}
                     <div>
                         <h4 className="font-bold mb-4">{storeName}.</h4>
                         <p className="text-sm text-gray-500">Redefining modern commerce.</p>
                     </div>
-                    <div>
-                        <h4 className="font-bold mb-4 text-sm uppercase">Shop</h4>
-                        <ul className="space-y-2 text-sm text-gray-500">
-                            <li><Link to={`${basePath}/products`}>New Arrivals</Link></li>
-                            <li><Link to={`${basePath}/products`}>All Products</Link></li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 className="font-bold mb-4 text-sm uppercase">Support</h4>
-                        <ul className="space-y-2 text-sm text-gray-500">
-                            <li><Link to="#">FAQ</Link></li>
-                            <li><Link to="#">Returns</Link></li>
-                        </ul>
-                    </div>
+
+                    {/* Dynamic Footer Sections from menu config */}
+                    {Object.entries(footerSections).map(([sectionName, items]) => (
+                        <div key={sectionName}>
+                            <h4 className="font-bold mb-4 text-sm uppercase">{sectionName}</h4>
+                            <ul className="space-y-2 text-sm text-gray-500">
+                                {items.map((item) => (
+                                    <li key={item.id}>
+                                        <Link
+                                            to={buildMenuPath(basePath, item.path)}
+                                            className="hover:text-gray-700 transition"
+                                        >
+                                            {item.label}
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ))}
+
+                    {/* Newsletter Column (always shown) */}
                     <div>
                         <h4 className="font-bold mb-4 text-sm uppercase">Newsletter</h4>
                         <div className="flex gap-2">

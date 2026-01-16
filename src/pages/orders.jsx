@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Filter, Package, Truck, CheckCircle, Clock, XCircle, Eye, Loader2, Download, RefreshCw } from 'lucide-react';
+import { Search, Filter, Package, Truck, CheckCircle, Clock, XCircle, Eye, Loader2, Download, RefreshCw, DollarSign, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAdminMerchant } from '../context/adminMerchantContext';
 
@@ -142,6 +142,7 @@ export default function Orders() {
     processing: orders.filter(o => o.status === 'processing').length,
     shipped: orders.filter(o => o.status === 'shipped').length,
     delivered: orders.filter(o => o.status === 'delivered').length,
+    awaitingPayment: orders.filter(o => o.payment_status === 'awaiting_payment').length,
     totalRevenue: orders.reduce((sum, o) => sum + (o.total || 0), 0)
   };
 
@@ -212,6 +213,31 @@ export default function Orders() {
           </div>
         </div>
       </div>
+
+      {/* Awaiting Payment Alert */}
+      {stats.awaitingPayment > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <DollarSign className="text-amber-600" size={20} />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-amber-800">
+                {stats.awaitingPayment} order{stats.awaitingPayment !== 1 ? 's' : ''} awaiting payment verification
+              </p>
+              <p className="text-sm text-amber-700">
+                These are Manual EFT orders waiting for Proof of Payment confirmation.
+              </p>
+            </div>
+            <Link
+              to="/orders?payment=awaiting"
+              className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition text-sm font-medium flex-shrink-0"
+            >
+              View Orders
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
@@ -348,10 +374,18 @@ export default function Orders() {
                         {formatCurrency(order.total)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.text}`}>
-                          <StatusIcon size={14} />
-                          {statusConfig.label}
-                        </span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.text}`}>
+                            <StatusIcon size={14} />
+                            {statusConfig.label}
+                          </span>
+                          {order.payment_status === 'awaiting_payment' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                              <DollarSign size={12} />
+                              Awaiting PoP
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <Link
