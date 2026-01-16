@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Share2, Eye, Save, Plus, X, ChevronDown, Layout } from 'lucide-react';
 import { uploadImage, deleteImage } from '../lib/uploadImage';
 import { useTemplates } from '../hooks/useTemplates';
+import { useAdminMerchant } from '../context/adminMerchantContext';
 
 export default function ProductCreator() {
   const navigate = useNavigate();
@@ -19,13 +20,13 @@ export default function ProductCreator() {
   const [inventory, setInventory] = useState('');
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
-  const [showPreview, setShowPreview] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
   const [templateId, setTemplateId] = useState(''); // Product page template
 
   const { addProduct, editProduct: updateProduct } = useProducts();
   const { templates, loading: templatesLoading } = useTemplates();
+  const { merchant } = useAdminMerchant();
   const fileInputRef = useRef(null);
 
   const categories = ['Electronics', 'Fashion', 'Home & Garden', 'Beauty', 'Sports', 'Books', 'Toys'];
@@ -268,7 +269,16 @@ export default function ProductCreator() {
   };
 
   const handlePreview = () => {
-    setShowPreview(true);
+    // For edit mode, open the product in the live storefront
+    if (isEditMode && editProduct?.id && merchant?.slug) {
+      const storefrontUrl = `/s/${merchant.slug}/product/${editProduct.id}`;
+      window.open(storefrontUrl, '_blank');
+    } else if (!isEditMode) {
+      // Product hasn't been saved yet
+      alert('Please save the product first to preview it in the storefront.');
+    } else if (!merchant?.slug) {
+      alert('Unable to preview: Store slug not found.');
+    }
   };
 
   return (
@@ -517,42 +527,7 @@ export default function ProductCreator() {
         </div>
       </div>
 
-      {/* Preview Modal */}
-      {showPreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setShowPreview(false)}>
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">Preview</h2>
-              <button onClick={() => setShowPreview(false)} className="text-gray-500 hover:text-gray-700">
-                <X size={24} />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold">{productTitle || 'Untitled Product'}</h3>
-              <p className="text-2xl font-bold text-blue-600">R {Number(price || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-              {images.length > 0 && (
-                <div className="grid grid-cols-3 gap-2">
-                  {images.map(img => (
-                    <img key={img.id} src={img.url} alt="" className="w-full aspect-square object-cover rounded-lg" />
-                  ))}
-                </div>
-              )}
-              <p className="text-gray-700 whitespace-pre-wrap">{description || 'No description provided.'}</p>
-              <div className="flex gap-4 text-sm text-gray-600">
-                <div><strong>Category:</strong> {category || 'None'}</div>
-                <div><strong>Stock:</strong> {inventory || '0'}</div>
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                {tags.map((tag) => (
-                  <span key={tag} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

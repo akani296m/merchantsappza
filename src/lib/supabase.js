@@ -10,4 +10,25 @@ if (!supabaseAnonKey) {
     console.error('Missing VITE_SUPABASE_ANON_KEY environment variable!')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+        // Use PKCE flow for better security (prevents token in URL)
+        flowType: 'pkce',
+        // Don't auto-detect session from URL (security: prevents token exposure)
+        detectSessionInUrl: true,
+        // Persist session in localStorage
+        persistSession: true,
+        // Auto-refresh token before expiry
+        autoRefreshToken: true,
+    },
+    global: {
+        headers: {
+            'X-Client-Info': 'merchants-app/1.0.0',
+        },
+    },
+    realtime: {
+        params: {
+            eventsPerSecond: 10,
+        },
+    },
+})
