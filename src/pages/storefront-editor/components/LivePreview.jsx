@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     Monitor,
     Smartphone,
@@ -8,7 +8,7 @@ import {
     Search
 } from 'lucide-react';
 import SectionRenderer from '../../../components/storefront/SectionRenderer';
-import { PAGE_TYPES, PAGE_TYPE_CONFIG } from '../../../components/storefront/sections';
+import { PAGE_TYPES, PAGE_TYPE_CONFIG, getSectionComponent } from '../../../components/storefront/sections';
 
 /**
  * Live preview component that renders sections in real-time
@@ -35,6 +35,16 @@ export default function LivePreview({
     const basePath = `/s/${merchantSlug || 'preview'}`;
     const pageConfig = PAGE_TYPE_CONFIG[pageType];
 
+    // Separate announcement bars from other sections
+    const { announcementBars, otherSections } = useMemo(() => {
+        const announcements = sections.filter(s => s.type === 'announcement_bar');
+        const others = sections.filter(s => s.type !== 'announcement_bar');
+        return {
+            announcementBars: announcements,
+            otherSections: others
+        };
+    }, [sections]);
+
     // Render page-specific content wrapper
     const renderPageContent = () => {
         switch (pageType) {
@@ -43,7 +53,7 @@ export default function LivePreview({
                     <div className="bg-gray-50 min-h-[400px]">
                         {/* Catalog sections at top */}
                         <SectionRenderer
-                            sections={sections}
+                            sections={otherSections}
                             basePath={basePath}
                             products={products}
                             productsLoading={productsLoading}
@@ -116,7 +126,7 @@ export default function LivePreview({
 
                                     {/* Product Trust Section placeholder - will be replaced by actual section */}
                                     <SectionRenderer
-                                        sections={sections}
+                                        sections={otherSections}
                                         basePath={basePath}
                                         products={products}
                                         productsLoading={productsLoading}
@@ -134,7 +144,7 @@ export default function LivePreview({
             default:
                 return (
                     <SectionRenderer
-                        sections={sections}
+                        sections={otherSections}
                         basePath={basePath}
                         products={products}
                         productsLoading={productsLoading}
@@ -144,6 +154,47 @@ export default function LivePreview({
                     />
                 );
         }
+    };
+
+    // Render announcement bars for the editor with editing indicators
+    const renderAnnouncementBars = () => {
+        return announcementBars.map((section) => {
+            const AnnouncementComponent = getSectionComponent(section.type);
+            if (!AnnouncementComponent) return null;
+
+            const isSelected = selectedSectionId === section.id;
+            const isHidden = !section.visible;
+
+            return (
+                <div
+                    key={section.id}
+                    className={`
+                        relative transition-all duration-200
+                        ${isHidden ? 'opacity-40' : ''}
+                        ${isSelected ? 'ring-2 ring-blue-500 ring-inset' : ''}
+                        ${onSelectSection ? 'cursor-pointer' : ''}
+                    `}
+                    onClick={() => onSelectSection && onSelectSection(section.id)}
+                >
+                    {/* Hidden indicator badge */}
+                    {isHidden && (
+                        <div className="absolute top-2 right-2 z-10 bg-gray-800 text-white text-xs px-2 py-1 rounded">
+                            Hidden
+                        </div>
+                    )}
+
+                    {/* Section type label for editor */}
+                    <div className="absolute top-2 left-2 z-10 bg-blue-500 text-white text-xs px-2 py-1 rounded capitalize">
+                        {section.type.replace(/_/g, ' ')}
+                    </div>
+
+                    <AnnouncementComponent
+                        settings={section.settings}
+                        basePath={basePath}
+                    />
+                </div>
+            );
+        });
     };
 
     return (
@@ -210,6 +261,9 @@ export default function LivePreview({
                     {/* Mini Store Preview with Navbar */}
                     <div className="overflow-y-auto max-h-[calc(100vh-220px)]">
 
+                        {/* Announcement Bars - ABOVE the navbar */}
+                        {renderAnnouncementBars()}
+
                         {/* Nav Preview */}
                         <nav className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3">
                             <div className="flex items-center justify-between">
@@ -238,3 +292,4 @@ export default function LivePreview({
         </div>
     );
 }
+

@@ -197,23 +197,14 @@ export default function ProductDetail() {
                             {product.title}
                         </h1>
 
-                        {/* Price & Stock Status */}
-                        <div className="flex items-center gap-4 mb-6 pb-6 border-b">
+                        {/* Price */}
+                        <div className="mb-6 pb-6 border-b">
                             <span className="text-3xl font-bold">
                                 R {Number(product.price).toLocaleString('en-ZA', {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2
                                 })}
                             </span>
-                            {inStock ? (
-                                <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
-                                    {product.inventory} in stock
-                                </span>
-                            ) : (
-                                <span className="px-3 py-1 bg-red-100 text-red-800 text-sm font-medium rounded-full">
-                                    Out of stock
-                                </span>
-                            )}
                         </div>
 
                         {/* Description */}
@@ -316,32 +307,7 @@ export default function ProductDetail() {
                     </div>
                 </div>
 
-                {/* Product Info Tabs */}
-                <div className="mt-16 border-t pt-12">
-                    <div className="max-w-3xl">
-                        <h2 className="text-2xl font-bold mb-6">Product Information</h2>
-                        <div className="space-y-4 text-gray-600">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <span className="font-medium text-gray-900">Product ID:</span>
-                                    <span className="ml-2">#{product.id}</span>
-                                </div>
-                                {product.category && (
-                                    <div>
-                                        <span className="font-medium text-gray-900">Category:</span>
-                                        <span className="ml-2">{product.category}</span>
-                                    </div>
-                                )}
-                                {product.inventory !== null && (
-                                    <div>
-                                        <span className="font-medium text-gray-900">Availability:</span>
-                                        <span className="ml-2">{product.inventory} units</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
             </div>
 
             {/* Bottom Sections (Related Products, Newsletter) */}

@@ -24,8 +24,15 @@ export default function SectionRenderer({
     onSectionClick = null
 }) {
     // Sort sections by position and filter hidden ones (unless editing)
+    // Note: announcement_bar sections are excluded here as they're rendered by StorefrontLayout above the header
     const visibleSections = sections
-        .filter(section => isEditing || section.visible)
+        .filter(section => {
+            // Always exclude announcement bars in non-edit mode (they render in layout)
+            if (!isEditing && section.type === 'announcement_bar') {
+                return false;
+            }
+            return isEditing || section.visible;
+        })
         .sort((a, b) => a.position - b.position);
 
     if (visibleSections.length === 0) {

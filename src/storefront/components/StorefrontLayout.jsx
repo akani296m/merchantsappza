@@ -3,6 +3,8 @@ import { Outlet, Link, useParams } from 'react-router-dom';
 import { Search, Loader2 } from 'lucide-react';
 import { useCart } from '../../context/cartcontext';
 import { MerchantProvider, useMerchant } from '../context/MerchantContext';
+import { useSections } from '../../hooks/useSections';
+import { getSectionComponent } from '../../components/storefront/sections';
 import StorefrontNotFound from './StorefrontNotFound';
 
 // Default menu items (used as fallback when no config is saved)
@@ -39,6 +41,9 @@ function StorefrontLayoutInner() {
     const { getTotalItems } = useCart();
     const { merchant, merchantSlug, loading, notFound, isCustomDomain } = useMerchant();
     const cartCount = getTotalItems();
+
+    // Fetch sections for announcement bars
+    const { sections, loading: sectionsLoading } = useSections(merchant?.id);
 
     // Parse menu configuration with fallbacks
     const { headerItems, footerSections } = useMemo(() => {
@@ -83,6 +88,15 @@ function StorefrontLayoutInner() {
         };
     }, [merchant?.menu_config]);
 
+    // Extract announcement bar sections
+    const announcementBars = useMemo(() => {
+        if (!sections || sections.length === 0) return [];
+
+        return sections
+            .filter(section => section.type === 'announcement_bar' && section.visible)
+            .sort((a, b) => a.position - b.position);
+    }, [sections]);
+
     // Show loading state while fetching merchant
     if (loading) {
         return (
@@ -107,6 +121,24 @@ function StorefrontLayoutInner() {
 
     return (
         <div className="min-h-screen flex flex-col font-sans text-gray-900 bg-white">
+
+            {/* --- ANNOUNCEMENT BARS (Above Everything) --- */}
+            {!sectionsLoading && announcementBars.length > 0 && (
+                <div className="w-full">
+                    {announcementBars.map((section) => {
+                        const AnnouncementBarComponent = getSectionComponent(section.type);
+                        if (!AnnouncementBarComponent) return null;
+
+                        return (
+                            <AnnouncementBarComponent
+                                key={section.id}
+                                settings={section.settings}
+                                basePath={basePath}
+                            />
+                        );
+                    })}
+                </div>
+            )}
 
             {/* --- STORE NAVIGATION --- */}
             <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
