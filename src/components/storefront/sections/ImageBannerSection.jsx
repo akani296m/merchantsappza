@@ -122,7 +122,7 @@ ImageBannerSection.sectionMeta = {
         { key: 'title', type: 'text', label: 'Title (optional)', placeholder: 'Banner headline...' },
         { key: 'subtitle', type: 'text', label: 'Subtitle (optional)', placeholder: 'Supporting text...' },
         { key: 'button_text', type: 'text', label: 'Button Text (optional)', placeholder: 'Shop Now' },
-        { key: 'button_link', type: 'text', label: 'Button Link', placeholder: '/catalog' },
+        { key: 'button_link', type: 'text', label: 'Button Link', placeholder: '/products' },
         {
             key: 'height', type: 'select', label: 'Banner Height', options: [
                 { value: 'small', label: 'Small' },

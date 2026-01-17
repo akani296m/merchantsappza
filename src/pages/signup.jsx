@@ -155,9 +155,12 @@ export default function Signup() {
                     ) : (
                         <>
                             {/* Page Headline */}
-                            <h1 className="text-3xl font-bold mb-8" style={{ color: '#111827' }}>
+                            <h1 className="text-3xl font-bold mb-2" style={{ color: '#111827' }}>
                                 Create your account
                             </h1>
+                            <p className="text-sm mb-8" style={{ color: '#6B7280' }}>
+                                Sign up to get access to your 7 day free trial
+                            </p>
 
                             {/* Signup Form */}
                             <form onSubmit={handleSubmit} className="space-y-5">

@@ -23,7 +23,7 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const [expandedMenus, setExpandedMenus] = useState({ orders: false, 'edit my store': false });
+  const [expandedMenus, setExpandedMenus] = useState({ orders: false, 'edit my store': false, marketing: false });
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const { user, signOut } = useAuth();
@@ -56,14 +56,26 @@ export default function Sidebar() {
       ]
     },
     { name: 'Products', icon: Package, path: '/products' },
-    { name: 'Sales', icon: DollarSign, path: '/sales' },
     { name: 'Customers', icon: Users, path: '/customers' },
-    { name: 'Marketing', icon: FileText, path: '/marketing' },
+    {
+      name: 'Marketing',
+      icon: FileText,
+      path: '/marketing',
+      hasSubmenu: true,
+      children: [
+        { name: 'Facebook', path: '/marketing/facebook' },
+        { name: 'Email', path: '/marketing/email' },
+        { name: 'TikTok', path: '/marketing/tiktok' },
+      ]
+    },
     { name: 'Analytics', icon: FileText, path: '/analytics' },
   ];
 
+  // Build the live store URL using merchant slug
+  const liveStoreUrl = merchant?.slug ? `/s/${merchant.slug}` : '/store';
+
   const manageStoreItems = [
-    { name: 'Preview My Store', icon: StoreIcon, path: '/store' },
+    { name: 'Preview My Store', icon: StoreIcon, path: liveStoreUrl, isExternalLink: true },
     {
       name: 'Edit My Store',
       icon: Settings,
@@ -88,7 +100,7 @@ export default function Sidebar() {
   );
 
   // Nav Item Component
-  const NavItem = ({ name, icon: Icon, path, hasSubmenu, children, onClick }) => {
+  const NavItem = ({ name, icon: Icon, path, hasSubmenu, children, isExternalLink, onClick }) => {
     const isMainActive = location.pathname === path;
     const isChildActive = children?.some(child => location.pathname === child.path);
     const isActive = isMainActive || (hasSubmenu && isChildActive);
@@ -97,6 +109,10 @@ export default function Sidebar() {
     const handleClick = () => {
       if (hasSubmenu) {
         toggleSubmenu(name.toLowerCase());
+      } else if (isExternalLink) {
+        // Open in new tab for live store preview
+        window.open(path, '_blank');
+        if (onClick) onClick();
       } else {
         navigate(path);
         if (onClick) onClick();

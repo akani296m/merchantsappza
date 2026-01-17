@@ -232,7 +232,7 @@ AnnouncementBarSection.sectionMeta = {
             label: 'Announcements',
             itemSchema: [
                 { key: 'text', type: 'text', label: 'Message', placeholder: 'Free shipping on orders over R1,500!' },
-                { key: 'link', type: 'text', label: 'Link (optional)', placeholder: '/catalog or https://...' },
+                { key: 'link', type: 'text', label: 'Link (optional)', placeholder: '/products or https://...' },
                 { key: 'icon', type: 'select', label: 'Icon', options: ANNOUNCEMENT_ICONS }
             ],
             maxItems: 5

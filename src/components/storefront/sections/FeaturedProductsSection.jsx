@@ -59,7 +59,7 @@ export default function FeaturedProductsSection({
                 </div>
                 {show_view_all && activeProducts.length > product_count && (
                     <Link
-                        to={`${basePath}/catalog`}
+                        to={`${basePath}/products`}
                         className="hidden md:flex items-center gap-2 text-sm font-bold border-b border-black pb-1 hover:text-gray-600 hover:border-gray-600 transition"
                     >
                         {view_all_text} <ArrowRight size={16} />
@@ -135,7 +135,7 @@ export default function FeaturedProductsSection({
             {!loading && show_view_all && activeProducts.length > product_count && (
                 <div className="mt-8 md:hidden">
                     <Link
-                        to={`${basePath}/catalog`}
+                        to={`${basePath}/products`}
                         className="block w-full text-center border border-gray-300 py-3 font-medium rounded"
                     >
                         View All Products

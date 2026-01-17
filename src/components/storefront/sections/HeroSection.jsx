@@ -117,7 +117,7 @@ export default function HeroSection({ settings = {}, basePath = '/store' }) {
 
         // Primary CTA
         button_text = 'Shop the Collection',
-        button_link = '/catalog',
+        button_link = '/products',
         button_style = 'solid', // 'solid', 'outline', 'gradient'
 
         // Secondary CTA
@@ -520,7 +520,7 @@ HeroSection.sectionMeta = {
 
         // Primary CTA
         button_text: 'Shop the Collection',
-        button_link: '/catalog',
+        button_link: '/products',
         button_style: 'solid',
 
         // Secondary CTA
@@ -575,7 +575,7 @@ HeroSection.sectionMeta = {
         // Primary CTA Section
         { key: '_cta_header', type: 'header', label: '🎯 Primary Button' },
         { key: 'button_text', type: 'text', label: 'Button Text', placeholder: 'Shop Now' },
-        { key: 'button_link', type: 'text', label: 'Button Link', placeholder: '/catalog' },
+        { key: 'button_link', type: 'text', label: 'Button Link', placeholder: '/products' },
         {
             key: 'button_style', type: 'select', label: 'Button Style', options: [
                 { value: 'solid', label: 'Solid White' },
