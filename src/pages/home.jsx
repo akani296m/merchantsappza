@@ -325,7 +325,7 @@ export default function Home() {
     <div className="p-8 max-w-7xl mx-auto space-y-6">
 
       {/* Header */}
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
+      <h1 className="hidden md:block text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
 
       {/* NEW MERCHANT ONBOARDING SETUP WIZARD */}
       {isNewMerchant ? (
@@ -435,140 +435,128 @@ export default function Home() {
         /* REGULAR DASHBOARD FOR ACTIVE MERCHANTS */
         <>
           {/* Sales Analytics Card */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            {/* Header with Title and Segmented Control */}
-            <div className="flex items-center justify-between mb-8">
-              {/* Title with Icon */}
-              <div className="flex items-center gap-2">
-                <BarChart3 size={20} className="text-[#111827]" />
-                <h2 className="text-[16px] font-semibold text-[#111827]">Sales</h2>
+          <div className="bg-white rounded-xl shadow-md p-4 md:p-6 mb-6">
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+
+              {/* Title & Hero Metric */}
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <BarChart3 size={20} className="text-[#111827]" />
+                  <h2 className="text-[16px] font-semibold text-[#111827]">Sales</h2>
+                </div>
+                {/* Hero Metric */}
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-gray-900">
+                    {formatCurrency(totalRevenue)}
+                  </span>
+                  {/* Placeholder trend indicator */}
+                  <span className="text-sm font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                    +12%
+                  </span>
+                </div>
               </div>
 
-              {/* Segmented Control Filter */}
-              <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
-                {['Today', 'This Week', 'Month', 'Year to Date'].map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => setTimeRange(option)}
-                    className={`px-3 py-1.5 text-[13px] font-medium rounded-md transition-all ${timeRange === option
-                      ? 'bg-white text-[#111827] shadow-sm'
-                      : 'text-[#9CA3AF] hover:text-[#6B7280]'
-                      }`}
-                  >
-                    {option}
-                  </button>
-                ))}
+              {/* Scrollable Filter Pills */}
+              <div className="flex overflow-x-auto pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 no-scrollbar">
+                <div className="flex gap-2">
+                  {['Today', 'This Week', 'Month', 'Year to Date'].map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => setTimeRange(option)}
+                      className={`whitespace-nowrap px-4 py-2 text-sm font-medium rounded-full border transition-all ${timeRange === option
+                        ? 'bg-[#111827] text-white border-[#111827]'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                        }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
             {/* CHART */}
             {loadingRevenue ? (
-              <div className="flex items-center justify-center" style={{ height: 400 }}>
+              <div className="flex items-center justify-center h-[200px] md:h-[400px]">
                 <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : revenueData.length === 0 ? (
-              <div className="flex items-center justify-center flex-col" style={{ height: 400 }}>
+              <div className="flex items-center justify-center flex-col h-[200px] md:h-[400px]">
                 <TrendingUp className="text-gray-300 mb-3" size={48} />
                 <p className="text-gray-500">No revenue data available for this period</p>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart
-                  data={revenueData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  barCategoryGap="20%"
-                >
-                  {/* Gridlines - faint dashed horizontal lines */}
-                  <CartesianGrid
-                    strokeDasharray="5 5"
-                    stroke="#E5E7EB"
-                    vertical={false}
-                  />
-
-                  {/* X-Axis */}
-                  <XAxis
-                    dataKey="time"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                    dy={10}
-                  />
-
-                  {/* Y-Axis - Auto-scales based on data */}
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#9CA3AF', fontSize: 12, textAnchor: 'end' }}
-                    tickFormatter={(value) => {
-                      if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
-                      if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
-                      return value;
-                    }}
-                    domain={[0, (dataMax) => {
-                      // Add 20% padding above the max value for visual breathing room
-                      const maxWithPadding = dataMax * 1.2;
-                      // Round to a nice number based on magnitude
-                      if (maxWithPadding <= 100) return Math.ceil(maxWithPadding / 10) * 10;
-                      if (maxWithPadding <= 1000) return Math.ceil(maxWithPadding / 100) * 100;
-                      if (maxWithPadding <= 10000) return Math.ceil(maxWithPadding / 1000) * 1000;
-                      if (maxWithPadding <= 100000) return Math.ceil(maxWithPadding / 10000) * 10000;
-                      return Math.ceil(maxWithPadding / 50000) * 50000;
-                    }]}
-                    allowDataOverflow={false}
-                  />
-
-                  {/* Tooltip */}
-                  <Tooltip
-                    cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const total = payload[0].payload.total;
-                        return (
-                          <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
-                            <p className="text-sm font-semibold text-gray-900">
-                              {formatCurrency(total)}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {payload[0].payload.time}
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-
-                  {/* Stacked Bars with gradients and rounded tops */}
-                  <defs>
-                    <linearGradient id="colorRevenue1" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#8B5CF6" stopOpacity={1} />
-                      <stop offset="100%" stopColor="#A78BFA" stopOpacity={1} />
-                    </linearGradient>
-                    <linearGradient id="colorRevenue2" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#EC4899" stopOpacity={1} />
-                      <stop offset="100%" stopColor="#F472B6" stopOpacity={1} />
-                    </linearGradient>
-                  </defs>
-
-                  {/* Bottom segment of the bar */}
-                  <Bar
-                    dataKey="revenue1"
-                    stackId="a"
-                    fill="url(#colorRevenue1)"
-                    radius={[0, 0, 0, 0]}
-                    maxBarSize={32}
-                  />
-
-                  {/* Top segment of the bar with rounded top */}
-                  <Bar
-                    dataKey="revenue2"
-                    stackId="a"
-                    fill="url(#colorRevenue2)"
-                    radius={[8, 8, 0, 0]}
-                    maxBarSize={32}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="h-[200px] md:h-[400px] w-[110%] -ml-[5%] md:w-full md:ml-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={revenueData}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="#E5E7EB"
+                    />
+                    <XAxis
+                      dataKey="time"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#9CA3AF', fontSize: 11 }}
+                      dy={10}
+                      interval="preserveStartEnd"
+                    />
+                    {/* Hide Y-Axis on mobile (width=0) */}
+                    <YAxis
+                      width={window.innerWidth < 768 ? 0 : 40}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#9CA3AF', fontSize: 11 }}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const total = payload[0].payload.total;
+                          return (
+                            <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+                              <p className="text-sm font-semibold text-gray-900">
+                                {formatCurrency(total)}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {payload[0].payload.time}
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <defs>
+                      <linearGradient id="colorRevenue1" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#8B5CF6" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#A78BFA" stopOpacity={1} />
+                      </linearGradient>
+                      <linearGradient id="colorRevenue2" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#EC4899" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#F472B6" stopOpacity={1} />
+                      </linearGradient>
+                    </defs>
+                    <Bar
+                      dataKey="revenue1"
+                      stackId="a"
+                      fill="url(#colorRevenue1)"
+                      radius={[0, 0, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="revenue2"
+                      stackId="a"
+                      fill="url(#colorRevenue2)"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             )}
           </div>
 

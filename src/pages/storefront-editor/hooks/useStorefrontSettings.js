@@ -15,6 +15,14 @@ const DEFAULT_SETTINGS = {
     primary_color: '#000000',
     accent_color: '#3b82f6',
 
+    // Typography / Fonts
+    font_heading: 'Poppins',
+    font_body: 'Poppins',
+    font_paragraph: 'Poppins',
+    font_heading_weight: '700',
+    font_body_weight: '400',
+    font_paragraph_weight: '400',
+
     // Trust Badges
     trust_badges: [
         { icon: 'Truck', title: 'Free Shipping', subtitle: 'On all orders over R 1,500' },
@@ -63,6 +71,12 @@ export function useStorefrontSettings(merchantId) {
                         logo_url,
                         primary_color,
                         accent_color,
+                        font_heading,
+                        font_body,
+                        font_paragraph,
+                        font_heading_weight,
+                        font_body_weight,
+                        font_paragraph_weight,
                         trust_badges,
                         email_capture_title,
                         email_capture_subtitle,
@@ -140,6 +154,12 @@ export function useStorefrontSettings(merchantId) {
                 logo_url: settings.logo_url,
                 primary_color: settings.primary_color,
                 accent_color: settings.accent_color,
+                font_heading: settings.font_heading,
+                font_body: settings.font_body,
+                font_paragraph: settings.font_paragraph,
+                font_heading_weight: settings.font_heading_weight,
+                font_body_weight: settings.font_body_weight,
+                font_paragraph_weight: settings.font_paragraph_weight,
                 trust_badges: settings.trust_badges,
                 email_capture_title: settings.email_capture_title,
                 email_capture_subtitle: settings.email_capture_subtitle,

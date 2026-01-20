@@ -7,12 +7,14 @@ import {
     AlertCircle,
     ExternalLink,
     Layers,
-    Palette
+    Palette,
+    Type
 } from 'lucide-react';
 import SectionList from './SectionList';
 import SectionEditor from './SectionEditor';
 import AddSectionModal from './AddSectionModal';
 import BrandingSettings from './BrandingSettings';
+import FontSettings from './FontSettings';
 import { PAGE_TYPE_CONFIG } from '../../../components/storefront/sections';
 
 /**
@@ -95,12 +97,12 @@ export default function EditorSidebar({
                             setEditMode('list');
                             onSelectSection(null);
                         }}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition ${activeTab === 'sections'
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition ${activeTab === 'sections'
                             ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                             }`}
                     >
-                        <Layers size={18} />
+                        <Layers size={16} />
                         <span>Sections</span>
                     </button>
                     <button
@@ -109,13 +111,27 @@ export default function EditorSidebar({
                             setEditMode('list');
                             onSelectSection(null);
                         }}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition ${activeTab === 'branding'
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition ${activeTab === 'branding'
                             ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                             }`}
                     >
-                        <Palette size={18} />
+                        <Palette size={16} />
                         <span>Branding</span>
+                    </button>
+                    <button
+                        onClick={() => {
+                            setActiveTab('typography');
+                            setEditMode('list');
+                            onSelectSection(null);
+                        }}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition ${activeTab === 'typography'
+                            ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                            }`}
+                    >
+                        <Type size={16} />
+                        <span>Fonts</span>
                     </button>
                 </div>
 
@@ -162,6 +178,17 @@ export default function EditorSidebar({
                         </p>
                     </div>
                 )}
+
+                {activeTab === 'typography' && (
+                    <div className="px-4 py-4">
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-lg font-bold text-gray-900">Typography</h2>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-1">
+                            Customize fonts for headings, body, and paragraphs
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Scrollable Content */}
@@ -187,8 +214,10 @@ export default function EditorSidebar({
                             />
                         )}
                     </div>
-                ) : (
+                ) : activeTab === 'branding' ? (
                     <BrandingSettings />
+                ) : (
+                    <FontSettings />
                 )}
             </div>
 

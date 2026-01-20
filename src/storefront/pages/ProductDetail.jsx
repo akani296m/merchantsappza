@@ -30,6 +30,29 @@ export default function ProductDetail() {
     // Base path for this merchant's storefront
     const basePath = isCustomDomain ? '' : `/s/${merchantSlug}`;
 
+    // Build breadcrumb items dynamically - MUST be before any early returns
+    const breadcrumbItems = useMemo(() => {
+        const items = [
+            { label: 'Home', path: '/' },
+            { label: 'Products', path: '/products' },
+        ];
+
+        // Add category if product has one
+        if (product?.category) {
+            items.push({
+                label: product.category,
+                path: `/products?category=${encodeURIComponent(product.category)}`,
+            });
+        }
+
+        // Add current product name (no path = not clickable)
+        items.push({
+            label: product?.title || 'Product',
+        });
+
+        return items;
+    }, [product?.category, product?.title]);
+
     // Helper to extract actual URL from nested objects
     const getImageUrl = (imageItem) => {
         if (!imageItem) return null;
@@ -130,29 +153,6 @@ export default function ProductDetail() {
 
     // Check if we have a custom trust section or should use default
     const hasCustomTrustSection = trustSections.length > 0;
-
-    // Build breadcrumb items dynamically
-    const breadcrumbItems = useMemo(() => {
-        const items = [
-            { label: 'Home', path: '/' },
-            { label: 'Products', path: '/products' },
-        ];
-
-        // Add category if product has one
-        if (product?.category) {
-            items.push({
-                label: product.category,
-                path: `/products?category=${encodeURIComponent(product.category)}`,
-            });
-        }
-
-        // Add current product name (no path = not clickable)
-        items.push({
-            label: product?.title || 'Product',
-        });
-
-        return items;
-    }, [product?.category, product?.title]);
 
     return (
         <div className="bg-white min-h-screen">

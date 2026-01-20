@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, Package, DollarSign, Users, FileText, Store as StoreIcon,
   ChevronDown, ChevronUp, Settings, Sliders, Trophy, Menu, X, PanelLeftClose,
-  Grid2X2, LogOut
+  Grid2X2, LogOut, LayoutDashboard
 } from 'lucide-react';
 import { useAuth } from '../context/authContext';
 import { useAdminMerchant } from '../context/adminMerchantContext';
@@ -168,16 +168,43 @@ export default function Sidebar() {
     );
   };
 
+  // Helper to determine page title for Mobile Header
+  const getPageTitle = () => {
+    const path = location.pathname;
+    if (path === '/' || path === '/admin') return 'Dashboard';
+    if (path.startsWith('/orders')) return 'Orders';
+    if (path.startsWith('/products')) return 'Products';
+    if (path.startsWith('/customers')) return 'Customers';
+    if (path.startsWith('/marketing')) return 'Marketing';
+    if (path.startsWith('/analytics')) return 'Analytics';
+    if (path.startsWith('/settings')) return 'Settings';
+    if (path.startsWith('/store')) return 'Manage Store';
+    return 'Soldt'; // Fallback
+  };
+
   return (
     <>
-      {/* Mobile Menu Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg border border-gray-200 hover:bg-gray-50 transition"
-        aria-label="Toggle menu"
-      >
-        {isOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
+      {/* Mobile App Bar (Header) */}
+      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-30 flex items-center px-4 justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Toggle menu"
+          >
+            {isOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+
+          <h1 className="text-lg font-semibold text-gray-900">
+            {getPageTitle()}
+          </h1>
+        </div>
+
+        {/* Optional: Right side action or logo placeholder */}
+        <div className="w-8 h-8 bg-[#ffcd00] rounded-md flex items-center justify-center">
+          <span className="text-[10px] font-bold text-[#111827]">S</span>
+        </div>
+      </header>
 
       {/* Backdrop Overlay for mobile */}
       {isOpen && (

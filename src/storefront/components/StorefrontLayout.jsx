@@ -119,8 +119,59 @@ function StorefrontLayoutInner() {
     const storeName = merchant.store_name || merchant.business_name || 'Store';
     const logoUrl = merchant.logo_url;
 
+    // Font configuration mapping
+    const FONT_FAMILIES = {
+        'Poppins': 'Poppins, sans-serif',
+        'Inter': 'Inter, sans-serif',
+        'System Default': 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    };
+
+    // Extract font settings with fallbacks
+    const fontHeading = FONT_FAMILIES[merchant.font_heading] || FONT_FAMILIES['Poppins'];
+    const fontBody = FONT_FAMILIES[merchant.font_body] || FONT_FAMILIES['Poppins'];
+    const fontParagraph = FONT_FAMILIES[merchant.font_paragraph] || FONT_FAMILIES['Poppins'];
+
+    const fontHeadingWeight = merchant.font_heading_weight || '700';
+    const fontBodyWeight = merchant.font_body_weight || '400';
+    const fontParagraphWeight = merchant.font_paragraph_weight || '400';
+
+    // CSS custom properties for fonts (applied to the storefront wrapper)
+    const fontStyles = {
+        '--font-heading': fontHeading,
+        '--font-body': fontBody,
+        '--font-paragraph': fontParagraph,
+        '--font-heading-weight': fontHeadingWeight,
+        '--font-body-weight': fontBodyWeight,
+        '--font-paragraph-weight': fontParagraphWeight,
+    };
+
     return (
-        <div className="min-h-screen flex flex-col font-sans text-gray-900 bg-white">
+        <div
+            className="min-h-screen flex flex-col text-gray-900 bg-white storefront-wrapper"
+            style={{
+                ...fontStyles,
+                fontFamily: fontBody,
+                fontWeight: fontBodyWeight,
+            }}
+        >
+            {/* Global font styles for this storefront */}
+            <style>{`
+                .storefront-wrapper h1,
+                .storefront-wrapper h2,
+                .storefront-wrapper h3,
+                .storefront-wrapper h4,
+                .storefront-wrapper h5,
+                .storefront-wrapper h6 {
+                    font-family: var(--font-heading);
+                    font-weight: var(--font-heading-weight);
+                }
+                
+                .storefront-wrapper p,
+                .storefront-wrapper .product-description {
+                    font-family: var(--font-paragraph);
+                    font-weight: var(--font-paragraph-weight);
+                }
+            `}</style>
 
             {/* --- ANNOUNCEMENT BARS (Above Everything) --- */}
             {!sectionsLoading && announcementBars.length > 0 && (
