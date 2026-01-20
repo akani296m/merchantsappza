@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Truck, ShieldCheck, ArrowLeft, Minus, Plus, Package, Loader2, Heart, Share2 } from 'lucide-react';
+import { Truck, ShieldCheck, Minus, Plus, Package, Loader2, Heart, Share2 } from 'lucide-react';
+import Breadcrumb from '../components/Breadcrumb';
 import { useMerchantProduct, useMerchantProducts } from '../hooks/useMerchantProducts';
 import { useCart } from '../../context/cartcontext';
 import { useMerchant } from '../context/MerchantContext';
@@ -86,13 +87,20 @@ export default function ProductDetail() {
     if (!product) {
         return (
             <div className="max-w-7xl mx-auto px-6 py-12">
+                <Breadcrumb
+                    items={[
+                        { label: 'Home', path: '/' },
+                        { label: 'Products', path: '/products' },
+                        { label: 'Not Found' }
+                    ]}
+                    basePath={basePath}
+                />
                 <div className="text-center py-20">
                     <Package className="mx-auto text-gray-300 mb-4" size={80} />
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Product Not Found</h2>
                     <p className="text-gray-500 mb-6">Sorry, we couldn't find the product you're looking for.</p>
-                    <Link to={basePath} className="inline-flex items-center gap-2 bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition">
-                        <ArrowLeft size={18} />
-                        Back to Store
+                    <Link to={`${basePath}/products`} className="inline-flex items-center gap-2 bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition">
+                        Browse Products
                     </Link>
                 </div>
             </div>
@@ -123,17 +131,34 @@ export default function ProductDetail() {
     // Check if we have a custom trust section or should use default
     const hasCustomTrustSection = trustSections.length > 0;
 
+    // Build breadcrumb items dynamically
+    const breadcrumbItems = useMemo(() => {
+        const items = [
+            { label: 'Home', path: '/' },
+            { label: 'Products', path: '/products' },
+        ];
+
+        // Add category if product has one
+        if (product?.category) {
+            items.push({
+                label: product.category,
+                path: `/products?category=${encodeURIComponent(product.category)}`,
+            });
+        }
+
+        // Add current product name (no path = not clickable)
+        items.push({
+            label: product?.title || 'Product',
+        });
+
+        return items;
+    }, [product?.category, product?.title]);
+
     return (
         <div className="bg-white min-h-screen">
-            {/* Back Button */}
+            {/* Breadcrumb Navigation */}
             <div className="max-w-7xl mx-auto px-6 pt-6">
-                <button
-                    onClick={() => navigate(basePath)}
-                    className="flex items-center gap-2 text-gray-600 hover:text-black transition mb-6"
-                >
-                    <ArrowLeft size={18} />
-                    Back to Store
-                </button>
+                <Breadcrumb items={breadcrumbItems} basePath={basePath} />
             </div>
 
             <div className="max-w-7xl mx-auto px-6 pb-12">
