@@ -56,6 +56,7 @@ ProductTrustSection.sectionMeta = {
     description: 'Trust signals like shipping info and security badges for product pages',
     icon: 'ShieldCheck',
     pageTypes: ['product'], // Only available on product page
+    zone: 'trust', // Renders in the trust signals area below add-to-cart
     defaultSettings: {
         badges: [
             { icon: 'Truck', title: 'Free Shipping', subtitle: 'On orders over R 1,500' },

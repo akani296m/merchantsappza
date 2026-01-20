@@ -39,6 +39,9 @@ import { StorefrontEditor } from './pages/storefront-editor';
 // Template Manager
 import { TemplateManager, TemplateEditor } from './pages/templates';
 
+// AI Store Builder (Demo)
+import { AIStoreBuilder } from './pages/ai-builder';
+
 // Storefront (new structure)
 import {
   StorefrontLayout,
@@ -146,6 +149,9 @@ export default function App() {
         {/* Template Manager */}
         <Route path="/store/templates" element={<TemplateManager />} />
         <Route path="/store/templates/:templateId/edit" element={<TemplateEditor />} />
+
+        {/* AI Store Builder (Internal Demo) */}
+        <Route path="/ai-builder" element={<AIStoreBuilder />} />
       </Route>
 
       {/* =========================================== */}

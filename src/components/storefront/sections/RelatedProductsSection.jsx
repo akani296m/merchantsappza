@@ -128,6 +128,7 @@ RelatedProductsSection.sectionMeta = {
     description: 'Grid of related products for product detail pages',
     icon: 'Grid',
     pageTypes: ['product'], // Only available on product page
+    zone: 'bottom', // Renders as full-width section at the bottom
     defaultSettings: {
         title: 'You May Also Like',
         subtitle: '',

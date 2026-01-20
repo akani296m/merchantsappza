@@ -21,6 +21,7 @@ import ProductTrustSection, { PRODUCT_TRUST_ICONS } from './ProductTrustSection'
 import RelatedProductsSection from './RelatedProductsSection';
 import FAQSection from './FAQSection';
 import AnnouncementBarSection, { ANNOUNCEMENT_ICONS } from './AnnouncementBarSection';
+import ProductTabsSection, { PRODUCT_TAB_ICONS } from './ProductTabsSection';
 
 /**
  * Page Types
@@ -74,6 +75,7 @@ export const SECTION_REGISTRY = {
     // Product page sections
     product_trust: ProductTrustSection,
     related_products: RelatedProductsSection,
+    product_tabs: ProductTabsSection,
 };
 
 /**
@@ -128,6 +130,27 @@ export const getSectionSchema = (type) => {
     const Component = SECTION_REGISTRY[type];
     if (!Component || !Component.sectionMeta) return [];
     return Component.sectionMeta.settingsSchema || [];
+};
+
+/**
+ * Section Zones for Product Page
+ * Defines where sections can render on the product detail page
+ */
+export const SECTION_ZONES = {
+    INLINE: 'inline',   // Inside the product info column (tabs, rich text)
+    TRUST: 'trust',     // Trust signals area below add-to-cart
+    BOTTOM: 'bottom'    // Full-width sections at the bottom (related products, newsletter)
+};
+
+/**
+ * Get the zone for a section type
+ * @param {string} type - The section type identifier
+ * @returns {string} The zone where the section should render
+ */
+export const getSectionZone = (type) => {
+    const Component = SECTION_REGISTRY[type];
+    if (!Component || !Component.sectionMeta) return SECTION_ZONES.BOTTOM;
+    return Component.sectionMeta.zone || SECTION_ZONES.BOTTOM;
 };
 
 /**
@@ -212,9 +235,11 @@ export {
     RelatedProductsSection,
     FAQSection,
     AnnouncementBarSection,
+    ProductTabsSection,
     TRUST_BADGE_ICONS,
     PRODUCT_TRUST_ICONS,
-    ANNOUNCEMENT_ICONS
+    ANNOUNCEMENT_ICONS,
+    PRODUCT_TAB_ICONS
 };
 
 // Export section type constants for type safety
@@ -230,4 +255,5 @@ export const SECTION_TYPES = {
     CATALOG_HEADER: 'catalog_header',
     PRODUCT_TRUST: 'product_trust',
     RELATED_PRODUCTS: 'related_products',
+    PRODUCT_TABS: 'product_tabs',
 };

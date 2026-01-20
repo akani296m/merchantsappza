@@ -6,7 +6,7 @@ import { useCart } from '../../context/cartcontext';
 import { useMerchant } from '../context/MerchantContext';
 import { useProductTemplateSections } from '../../hooks/useProductTemplateSections';
 import SectionRenderer from '../../components/storefront/SectionRenderer';
-import { PAGE_TYPES } from '../../components/storefront/sections';
+import { PAGE_TYPES, getSectionZone, SECTION_ZONES } from '../../components/storefront/sections';
 
 export default function ProductDetail() {
     const { merchantSlug, productId } = useParams();
@@ -107,14 +107,17 @@ export default function ProductDetail() {
     const hasImages = productImages.length > 0;
     const inStock = product.inventory && product.inventory > 0;
 
-    // Get trust/info sections (product_trust type)
+    // Filter sections by zone
     const trustSections = sections.filter(s =>
-        s.visible && s.type === 'product_trust'
+        s.visible && getSectionZone(s.type) === SECTION_ZONES.TRUST
     );
 
-    // Get bottom sections (related_products, newsletter)
+    const inlineSections = sections.filter(s =>
+        s.visible && getSectionZone(s.type) === SECTION_ZONES.INLINE
+    );
+
     const bottomSections = sections.filter(s =>
-        s.visible && ['related_products', 'newsletter', 'rich_text'].includes(s.type)
+        s.visible && getSectionZone(s.type) === SECTION_ZONES.BOTTOM
     );
 
     // Check if we have a custom trust section or should use default
@@ -302,6 +305,18 @@ export default function ProductDetail() {
                                         <p className="text-xs">Protected checkout & 30-day returns</p>
                                     </div>
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Inline Sections (Product Tabs, Accordions, etc.) */}
+                        {inlineSections.length > 0 && (
+                            <div className="mt-8">
+                                <SectionRenderer
+                                    sections={inlineSections}
+                                    basePath={basePath}
+                                    products={products}
+                                    productsLoading={productsLoading}
+                                />
                             </div>
                         )}
                     </div>
