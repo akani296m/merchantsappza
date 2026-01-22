@@ -23,7 +23,7 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const [expandedMenus, setExpandedMenus] = useState({ orders: false, 'edit my store': false, marketing: false });
+  const [expandedMenus, setExpandedMenus] = useState({ orders: false, products: false, 'edit my store': false, marketing: false });
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const { user, signOut } = useAuth();
@@ -55,7 +55,16 @@ export default function Sidebar() {
         { name: 'Order Tracking', path: '/orders/tracking' },
       ]
     },
-    { name: 'Products', icon: Package, path: '/products' },
+    {
+      name: 'Products',
+      icon: Package,
+      path: '/products',
+      hasSubmenu: true,
+      children: [
+        { name: 'All Products', path: '/products' },
+        { name: 'Collections', path: '/products/collections' },
+      ]
+    },
     { name: 'Customers', icon: Users, path: '/customers' },
     {
       name: 'Marketing',

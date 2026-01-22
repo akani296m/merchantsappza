@@ -4,6 +4,7 @@ import { getSectionSchema } from '../../../components/storefront/sections';
 import ImageUploader from './ImageUploader';
 import ColorPicker from './ColorPicker';
 import { TRUST_BADGE_ICONS } from '../../../components/storefront/sections/TrustBadgesSection';
+import { useCollections } from '../../../context/collectionContext';
 
 /**
  * Section Editor Component
@@ -14,6 +15,8 @@ export default function SectionEditor({
     onUpdateSetting,
     onBack
 }) {
+    const { collections, loading: collectionsLoading } = useCollections();
+
     if (!section) {
         return (
             <div className="p-4 text-center text-gray-500">
@@ -170,6 +173,47 @@ export default function SectionEditor({
                         aspectRatio={field.aspectRatio || 'aspect-video'}
                         placeholder={field.placeholder || 'Upload image'}
                     />
+                );
+
+            case 'collection_select':
+                const activeCollections = collections?.filter(c => c.is_active) || [];
+                return (
+                    <div key={field.key}>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {field.label}
+                            {field.required && <span className="text-red-500 ml-1">*</span>}
+                        </label>
+                        {collectionsLoading ? (
+                            <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-400 text-sm">
+                                Loading collections...
+                            </div>
+                        ) : activeCollections.length === 0 ? (
+                            <div className="space-y-2">
+                                <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-400 text-sm">
+                                    No collections available
+                                </div>
+                                <p className="text-xs text-gray-500">
+                                    Create a collection first to use this section
+                                </p>
+                            </div>
+                        ) : (
+                            <select
+                                value={value || ''}
+                                onChange={(e) => onUpdateSetting(section.id, field.key, e.target.value ? parseInt(e.target.value) : null)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            >
+                                <option value="">Select a collection...</option>
+                                {activeCollections.map((collection) => (
+                                    <option key={collection.id} value={collection.id}>
+                                        {collection.name} ({collection.collection_products?.length || 0} products)
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                        {field.helperText && (
+                            <p className="text-xs text-gray-500 mt-1">{field.helperText}</p>
+                        )}
+                    </div>
                 );
 
             case 'array':

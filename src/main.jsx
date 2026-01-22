@@ -6,6 +6,7 @@ import './index.css'
 import { AuthProvider } from './context/authContext.jsx';
 import { AdminMerchantProvider } from './context/adminMerchantContext.jsx';
 import { ProductProvider } from './context/productcontext.jsx';
+import { CollectionProvider } from './context/collectionContext.jsx';
 import { CartProvider } from './context/cartcontext.jsx';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -13,11 +14,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <AuthProvider>
       <AdminMerchantProvider>
         <ProductProvider>
-          <CartProvider>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
-          </CartProvider>
+          <CollectionProvider>
+            <CartProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </CartProvider>
+          </CollectionProvider>
         </ProductProvider>
       </AdminMerchantProvider>
     </AuthProvider>

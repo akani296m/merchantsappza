@@ -19,6 +19,8 @@ import Signup from './pages/signup';
 import FacebookMarketing from './pages/marketing/Facebook';
 import Pages from './pages/store/Pages';
 import Navigation from './pages/store/Navigation';
+import Collections from './pages/collections';
+import CollectionEditor from './pages/collectionEditor';
 
 // Settings Pages
 import {
@@ -139,6 +141,9 @@ export default function App() {
         <Route path="/orders/:id" element={<OrderDetail />} />
         <Route path="/products" element={<ProductsPage />} />
         <Route path="/products/create" element={<ProductCreator />} />
+        <Route path="/products/collections" element={<Collections />} />
+        <Route path="/products/collections/create" element={<CollectionEditor />} />
+        <Route path="/products/collections/edit" element={<CollectionEditor />} />
         <Route path="/customers" element={<CustomersPage />} />
 
         {/* Marketing Routes */}
