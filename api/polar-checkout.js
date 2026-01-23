@@ -20,7 +20,7 @@ export default async function handler(request) {
 
     const url = new URL(request.url);
     const accessToken = process.env.POLAR_ACCESS_TOKEN;
-    const server = process.env.POLAR_ENVIRONMENT || 'sandbox'; // 'sandbox' or 'production'
+    const server = process.env.POLAR_ENVIRONMENT || 'production'; // 'sandbox' or 'production'
     const successUrl = process.env.POLAR_SUCCESS_URL || `${url.origin}/billing/success`;
     const returnUrl = process.env.POLAR_RETURN_URL || url.origin;
 
