@@ -21,6 +21,9 @@ const POLAR_PRODUCTS = {
     growth: import.meta.env.VITE_POLAR_GROWTH_PRODUCT_ID || 'YOUR_GROWTH_PRODUCT_ID',
 };
 
+// Fly.io API URL for Polar endpoints
+const POLAR_API_URL = import.meta.env.VITE_POLAR_API_URL || 'https://soldt-polar-api.fly.dev';
+
 export default function Billing() {
     const { merchant, refetch } = useAdminMerchant();
     const [loading, setLoading] = useState(false);
@@ -54,8 +57,8 @@ export default function Billing() {
                 metadata: JSON.stringify({ merchantId: merchant.id, plan: planName }),
             });
 
-            // Redirect to Polar checkout via our API
-            window.location.href = `/api/polar-checkout?${params.toString()}`;
+            // Redirect to Polar checkout via Fly.io API
+            window.location.href = `${POLAR_API_URL}/api/polar-checkout?${params.toString()}`;
         } catch (error) {
             console.error('Error redirecting to checkout:', error);
             alert('Failed to start checkout. Please try again.');
@@ -69,7 +72,7 @@ export default function Billing() {
             alert('Unable to open subscription management. Please try again.');
             return;
         }
-        window.location.href = `/api/polar-customer-portal?merchantId=${merchant.id}`;
+        window.location.href = `${POLAR_API_URL}/api/polar-customer-portal?merchantId=${merchant.id}`;
     };
 
     const features = {
