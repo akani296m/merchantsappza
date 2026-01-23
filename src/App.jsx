@@ -34,6 +34,7 @@ import {
   TaxesSettings,
   DangerZoneSettings,
 } from './pages/settings';
+import BillingSuccess from './pages/settings/BillingSuccess';
 
 // Storefront Editor
 import { StorefrontEditor } from './pages/storefront-editor';
@@ -266,6 +267,18 @@ export default function App() {
         {/* Default redirect to general settings */}
         <Route index element={<GeneralSettings />} />
       </Route>
+
+      {/* =========================================== */}
+      {/* BILLING SUCCESS (Protected + Merchant)     */}
+      {/* Standalone route for Polar checkout success*/}
+      {/* =========================================== */}
+      <Route path="/billing/success" element={
+        <ProtectedRoute>
+          <RequireMerchant>
+            <BillingSuccess />
+          </RequireMerchant>
+        </ProtectedRoute>
+      } />
 
       {/* 404 Catch-all */}
       <Route path="*" element={<div className="min-h-screen flex items-center justify-center"><div className="text-center"><h1 className="text-4xl font-bold text-gray-900 mb-4">Page Not Found</h1><p className="text-gray-600">The page you're looking for doesn't exist.</p></div></div>} />

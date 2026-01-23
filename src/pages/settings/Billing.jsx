@@ -6,46 +6,70 @@ import {
     Layout,
     Shield,
     Search,
-    Eye
+    Eye,
+    CreditCard,
+    CheckCircle,
+    ExternalLink
 } from 'lucide-react';
 import { useAdminMerchant } from '../../context/adminMerchantContext';
 import { supabase } from '../../lib/supabase';
+
+// Polar Product IDs for each plan
+// Replace these with your actual Polar product IDs from your Polar dashboard
+const POLAR_PRODUCTS = {
+    launch: import.meta.env.VITE_POLAR_LAUNCH_PRODUCT_ID || 'YOUR_LAUNCH_PRODUCT_ID',
+    growth: import.meta.env.VITE_POLAR_GROWTH_PRODUCT_ID || 'YOUR_GROWTH_PRODUCT_ID',
+};
 
 export default function Billing() {
     const { merchant, refetch } = useAdminMerchant();
     const [loading, setLoading] = useState(false);
 
-    // Function to handle plan selection
+    // Check if merchant has an active subscription
+    const hasActiveSubscription = merchant?.subscription_status === 'active' &&
+        merchant?.subscription_plan &&
+        merchant?.subscription_plan !== 'trial';
+
+    // Function to handle plan selection - redirects to Polar checkout
     const handleSelectPlan = async (planName) => {
         if (!merchant?.id) {
-            alert('Unable to update subscription. Please try again.');
+            alert('Unable to start checkout. Please try again.');
+            return;
+        }
+
+        const productId = POLAR_PRODUCTS[planName.toLowerCase()];
+        if (!productId || productId.startsWith('YOUR_')) {
+            alert('This plan is not yet configured. Please contact support.');
             return;
         }
 
         setLoading(true);
         try {
-            // Update merchant subscription in database
-            const { error } = await supabase
-                .from('merchants')
-                .update({
-                    subscription_plan: planName.toLowerCase(),
-                    subscription_status: 'active',
-                    subscription_started_at: new Date().toISOString(),
-                })
-                .eq('id', merchant.id);
+            // Build checkout URL with merchant info
+            const params = new URLSearchParams({
+                products: productId,
+                customerExternalId: merchant.id.toString(),
+                customerEmail: merchant.email || '',
+                customerName: merchant.name || '',
+                metadata: JSON.stringify({ merchantId: merchant.id, plan: planName }),
+            });
 
-            if (error) throw error;
-
-            // Refetch merchant data to update the UI
-            await refetch();
-
-            alert(`Successfully subscribed to ${planName} plan!`);
+            // Redirect to Polar checkout via our API
+            window.location.href = `/api/polar-checkout?${params.toString()}`;
         } catch (error) {
-            console.error('Error updating subscription:', error);
-            alert('Failed to update subscription. Please try again.');
-        } finally {
+            console.error('Error redirecting to checkout:', error);
+            alert('Failed to start checkout. Please try again.');
             setLoading(false);
         }
+    };
+
+    // Function to open customer portal for managing subscription
+    const handleManageSubscription = () => {
+        if (!merchant?.id) {
+            alert('Unable to open subscription management. Please try again.');
+            return;
+        }
+        window.location.href = `/api/polar-customer-portal?merchantId=${merchant.id}`;
     };
 
     const features = {
@@ -65,10 +89,49 @@ export default function Billing() {
 
     return (
         <div className="min-h-screen" style={{ background: '#F7F7F5' }}>
+            {/* Current Subscription Status - Show if active */}
+            {hasActiveSubscription && (
+                <div className="max-w-4xl mx-auto px-4 pt-8 pb-6">
+                    <div
+                        className="bg-white rounded-xl p-6 border flex items-center justify-between"
+                        style={{ borderColor: '#E0E0E0' }}
+                    >
+                        <div className="flex items-center gap-4">
+                            <div
+                                className="w-12 h-12 rounded-full flex items-center justify-center"
+                                style={{ background: '#F0F9FF' }}
+                            >
+                                <CheckCircle size={24} style={{ color: '#3B82F6' }} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold mb-1" style={{ color: '#111' }}>
+                                    Active Subscription
+                                </h3>
+                                <p className="text-sm" style={{ color: '#666' }}>
+                                    You're currently on the <span className="font-semibold capitalize">{merchant?.subscription_plan}</span> plan
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={handleManageSubscription}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-opacity hover:opacity-80"
+                            style={{
+                                background: '#3B82F6',
+                                color: 'white',
+                            }}
+                        >
+                            <CreditCard size={18} />
+                            Manage Subscription
+                            <ExternalLink size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Header Section */}
             <div className="text-center mb-10 pt-8">
                 <h1 className="text-3xl font-bold mb-2" style={{ color: '#111' }}>
-                    Choose your Plan
+                    {hasActiveSubscription ? 'Change Your Plan' : 'Choose your Plan'}
                 </h1>
                 <p className="text-base font-medium" style={{ color: '#888' }}>
                     Plans built for every stage of your business journey
