@@ -1,12 +1,15 @@
-// Vercel Serverless Function to handle Polar webhook events
+// Express.js Polar Webhook Handler for Fly.io
 // This processes subscription lifecycle events and updates the database
 
+import express from 'express';
 import { createClient } from '@supabase/supabase-js';
+
+const router = express.Router();
 
 // Initialize Supabase client
 const supabase = createClient(
-    process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 // Update merchant subscription status
@@ -61,21 +64,10 @@ async function findMerchant(customerId, externalId) {
     return null;
 }
 
-export default async function handler(request) {
-    // Only allow POST requests
-    if (request.method !== 'POST') {
-        return new Response(
-            JSON.stringify({ error: 'Method not allowed' }),
-            {
-                status: 405,
-                headers: { 'Content-Type': 'application/json' },
-            }
-        );
-    }
-
+// POST /api/polar-webhook
+router.post('/polar-webhook', async (req, res) => {
     try {
-        const payload = await request.text();
-        const event = JSON.parse(payload);
+        const event = req.body;
         const eventType = event.type;
         const eventData = event.data;
 
@@ -94,7 +86,6 @@ export default async function handler(request) {
             case 'order.created':
             case 'order.paid':
                 console.log('Order event:', eventType, eventData.id);
-                // For one-time payments, you might want to handle this
                 break;
 
             case 'subscription.created':
@@ -180,34 +171,22 @@ export default async function handler(request) {
             case 'customer.created':
             case 'customer.updated':
                 console.log('Customer event:', eventType, eventData.id);
-                // You could store additional customer data here
                 break;
 
             case 'customer.deleted':
                 console.log('Customer deleted:', eventData.id);
-                // Handle customer deletion if needed
                 break;
 
             default:
                 console.log('Unhandled event type:', eventType);
         }
 
-        return new Response(
-            JSON.stringify({ received: true }),
-            {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' },
-            }
-        );
+        res.status(200).json({ received: true });
 
     } catch (error) {
         console.error('Webhook processing error:', error);
-        return new Response(
-            JSON.stringify({ error: 'Webhook processing failed' }),
-            {
-                status: 500,
-                headers: { 'Content-Type': 'application/json' },
-            }
-        );
+        res.status(500).json({ error: 'Webhook processing failed' });
     }
-}
+});
+
+export default router;
