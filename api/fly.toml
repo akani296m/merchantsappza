@@ -1,22 +1,21 @@
-# Fly.io configuration for Polar API Server
-app = 'soldt-polar-api'
-primary_region = 'jnb'
+# fly.toml app configuration file generated for akani on 2026-01-23T19:34:27+02:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+app = "akani"
 
 [build]
   dockerfile = "Dockerfile"
 
-[env]
-  PORT = "8080"
-  POLAR_ENVIRONMENT = "sandbox"
-
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = false
-  auto_start_machines = true
-  min_machines_running = 1
 
-[[vm]]
-  cpu_kind = "shared"
-  cpus = 1
-  memory_mb = 256
+[[services.ports]]
+  port = 80
+  handlers = ["http"]
+
+[[services.ports]]
+  port = 443
+  handlers = ["tls","http"]
+
