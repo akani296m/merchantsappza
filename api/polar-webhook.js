@@ -1,40 +1,13 @@
-// Vercel Edge Function to handle Polar webhook events
+// Vercel Serverless Function to handle Polar webhook events
 // This processes subscription lifecycle events and updates the database
 
 import { createClient } from '@supabase/supabase-js';
-import { createHmac } from 'crypto';
-
-export const config = {
-    runtime: 'edge',
-};
 
 // Initialize Supabase client
 const supabase = createClient(
     process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
 );
-
-// Verify webhook signature
-async function verifyWebhookSignature(payload, signature, secret) {
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-        'raw',
-        encoder.encode(secret),
-        { name: 'HMAC', hash: 'SHA-256' },
-        false,
-        ['sign']
-    );
-    const signatureBuffer = await crypto.subtle.sign(
-        'HMAC',
-        key,
-        encoder.encode(payload)
-    );
-    const computedSignature = Array.from(new Uint8Array(signatureBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-
-    return computedSignature === signature;
-}
 
 // Update merchant subscription status
 async function updateMerchantSubscription(merchantId, subscriptionData) {
@@ -100,33 +73,8 @@ export default async function handler(request) {
         );
     }
 
-    const webhookSecret = process.env.POLAR_WEBHOOK_SECRET;
-
-    if (!webhookSecret) {
-        console.error('POLAR_WEBHOOK_SECRET not configured');
-        return new Response(
-            JSON.stringify({ error: 'Webhook secret not configured' }),
-            { status: 500, headers: { 'Content-Type': 'application/json' } }
-        );
-    }
-
     try {
         const payload = await request.text();
-        const signature = request.headers.get('polar-signature') ||
-            request.headers.get('webhook-signature');
-
-        // Verify signature (optional but recommended)
-        if (signature) {
-            const isValid = await verifyWebhookSignature(payload, signature, webhookSecret);
-            if (!isValid) {
-                console.error('Invalid webhook signature');
-                return new Response(
-                    JSON.stringify({ error: 'Invalid signature' }),
-                    { status: 401, headers: { 'Content-Type': 'application/json' } }
-                );
-            }
-        }
-
         const event = JSON.parse(payload);
         const eventType = event.type;
         const eventData = event.data;

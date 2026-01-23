@@ -1,11 +1,7 @@
-// Vercel Edge Function to create Yoco checkout sessions
+// Vercel Serverless Function to create Yoco checkout sessions
 // This keeps the Yoco secret key secure on the server side
 
 import { createClient } from '@supabase/supabase-js';
-
-export const config = {
-    runtime: 'edge',
-};
 
 // Initialize Supabase client
 const supabase = createClient(
