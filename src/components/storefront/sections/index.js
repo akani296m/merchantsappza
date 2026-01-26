@@ -23,6 +23,7 @@ import FAQSection from './FAQSection';
 import AnnouncementBarSection, { ANNOUNCEMENT_ICONS } from './AnnouncementBarSection';
 import ProductTabsSection, { PRODUCT_TAB_ICONS } from './ProductTabsSection';
 import CollectionCarouselSection from './CollectionCarouselSection';
+import UsVsThemSection from './UsVsThemSection';
 
 /**
  * Page Types
@@ -70,6 +71,7 @@ export const SECTION_REGISTRY = {
     faq: FAQSection,
     announcement_bar: AnnouncementBarSection,
     collection_carousel: CollectionCarouselSection,
+    us_vs_them: UsVsThemSection,
 
     // Catalog page sections
     catalog_header: CatalogHeaderSection,
@@ -239,6 +241,7 @@ export {
     AnnouncementBarSection,
     ProductTabsSection,
     CollectionCarouselSection,
+    UsVsThemSection,
     TRUST_BADGE_ICONS,
     PRODUCT_TRUST_ICONS,
     ANNOUNCEMENT_ICONS,
@@ -260,4 +263,5 @@ export const SECTION_TYPES = {
     RELATED_PRODUCTS: 'related_products',
     PRODUCT_TABS: 'product_tabs',
     COLLECTION_CAROUSEL: 'collection_carousel',
+    US_VS_THEM: 'us_vs_them',
 };
