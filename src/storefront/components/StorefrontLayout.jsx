@@ -246,7 +246,7 @@ function StorefrontLayoutInner() {
                     {/* Store Info Column */}
                     <div>
                         <h4 className="font-bold mb-4">{storeName}.</h4>
-                        <p className="text-sm text-gray-500">Redefining modern commerce.</p>
+                        <p className="text-sm text-gray-500">{merchant.footer_tagline || 'Redefining modern commerce.'}</p>
                     </div>
 
                     {/* Dynamic Footer Sections from menu config */}

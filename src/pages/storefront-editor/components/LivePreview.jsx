@@ -22,7 +22,8 @@ export default function LivePreview({
     merchantSlug,
     products = [],
     productsLoading = false,
-    pageType = PAGE_TYPES.HOME
+    pageType = PAGE_TYPES.HOME,
+    onFooterClick = null
 }) {
     const [device, setDevice] = useState('desktop');
 
@@ -279,8 +280,18 @@ export default function LivePreview({
                         {/* Page Content */}
                         {renderPageContent()}
 
-                        {/* Footer Preview */}
-                        <footer className="bg-gray-50 py-6 px-6 text-center">
+                        {/* Footer Preview - Clickable for editing */}
+                        <footer
+                            className={`bg-gray-50 py-6 px-6 text-center relative transition-all cursor-pointer group ${onFooterClick ? 'hover:ring-2 hover:ring-blue-400 hover:ring-inset' : ''
+                                }`}
+                            onClick={() => onFooterClick && onFooterClick()}
+                        >
+                            {/* Click to edit indicator */}
+                            {onFooterClick && (
+                                <div className="absolute top-2 left-2 z-10 bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                    Click to edit footer
+                                </div>
+                            )}
                             <p className="text-[10px] text-gray-400">
                                 © 2024 Your Store. All rights reserved.
                             </p>

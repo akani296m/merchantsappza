@@ -132,7 +132,7 @@ export default function Sidebar() {
       <div className="w-full">
         <button
           onClick={handleClick}
-          className={`w-full h-10 flex items-center justify-between px-3 rounded-lg transition-all ${isActive && name === 'Home'
+          className={`w-full h-[28px] flex items-center justify-between px-3 rounded-lg transition-all ${isActive && name === 'Home'
             ? 'bg-white text-[#111827] shadow-sm'
             : 'bg-transparent text-[#111827] hover:bg-gray-100'
             }`}
@@ -143,7 +143,7 @@ export default function Sidebar() {
               strokeWidth={1.5}
               fill={isActive && name === 'Home' ? '#111827' : 'none'}
             />
-            <span className="text-[14px] font-medium">{name}</span>
+            <span className="text-[14px] font-medium" style={{ letterSpacing: '-0.15px' }}>{name}</span>
           </div>
           {hasSubmenu && (
             isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />
@@ -162,12 +162,12 @@ export default function Sidebar() {
                     navigate(child.path);
                     if (onClick) onClick();
                   }}
-                  className={`w-full flex items-center px-3 py-2 rounded-md transition-colors text-left ${isChildItemActive
+                  className={`w-full h-[28px] flex items-center px-3 rounded-md transition-colors text-left ${isChildItemActive
                     ? 'text-[#111827] font-medium'
                     : 'text-[#6B7280] hover:text-[#111827] hover:bg-gray-50'
                     }`}
                 >
-                  <span className="text-[13px]">{child.name}</span>
+                  <span className="text-[13px]" style={{ letterSpacing: '-0.15px' }}>{child.name}</span>
                 </button>
               );
             })}
@@ -272,11 +272,11 @@ export default function Sidebar() {
           {/* Settings */}
           <button
             onClick={() => navigate('/settings')}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+            className="w-full h-[28px] flex items-center justify-between px-3 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <div className="flex items-center gap-3">
               <Sliders size={20} strokeWidth={1.5} className="text-[#111827]" />
-              <span className="text-[14px] font-medium text-[#111827]">Settings</span>
+              <span className="text-[14px] font-medium text-[#111827]" style={{ letterSpacing: '-0.15px' }}>Settings</span>
             </div>
             <ChevronDown size={16} className="text-[#111827]" />
           </button>
@@ -287,10 +287,10 @@ export default function Sidebar() {
               await signOut();
               navigate('/login');
             }}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-50 text-[#111827] hover:text-red-600 transition-colors"
+            className="w-full h-[28px] flex items-center gap-3 px-3 rounded-lg hover:bg-red-50 text-[#111827] hover:text-red-600 transition-colors"
           >
             <LogOut size={20} strokeWidth={1.5} />
-            <span className="text-[14px] font-medium">Log Out</span>
+            <span className="text-[14px] font-medium" style={{ letterSpacing: '-0.15px' }}>Log Out</span>
           </button>
 
           {/* Premium Promo Card - Only show for trial users or users without active subscription */}

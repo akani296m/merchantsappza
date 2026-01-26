@@ -24,14 +24,27 @@ export default function Home() {
   const [loadingRevenue, setLoadingRevenue] = useState(true);
   const navigate = useNavigate();
 
-  // Check if this is a new merchant that needs onboarding setup
-  // A merchant is considered "new" if they have no products yet
-  const isNewMerchant = !productsLoading && !merchantLoading && products.length === 0;
-
   // Check completion status of each setup step
   const hasStoreName = merchant?.store_name || merchant?.name || merchant?.business_name;
   const hasProducts = products.length > 0;
-  const hasPaymentSetup = merchant?.paystack_public_key; // Check if any payment gateway is configured
+
+  // Check if any payment gateway is configured (check multiple payment options)
+  const hasPaymentSetup = !!(
+    merchant?.paystack_public_key ||
+    merchant?.yoco_secret_key ||
+    merchant?.whop_plan_id ||
+    merchant?.payfast_merchant_id ||
+    merchant?.peach_entity_id ||
+    merchant?.ozow_site_code ||
+    (merchant?.eft_enabled && merchant?.eft_bank_name && merchant?.eft_account_number)
+  );
+
+  // A merchant needs to complete onboarding if they haven't finished ALL essential steps
+  // Essential steps: store name (always done after signup), products, and payment setup
+  const hasCompletedEssentialOnboarding = hasStoreName && hasProducts && hasPaymentSetup;
+
+  // Show onboarding wizard if essential steps are incomplete
+  const isNewMerchant = !productsLoading && !merchantLoading && !hasCompletedEssentialOnboarding;
 
   // Setup steps configuration
   const setupSteps = [

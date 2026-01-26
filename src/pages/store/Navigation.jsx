@@ -385,7 +385,7 @@ export default function Navigation() {
                             {activeTab === 'header' ? (
                                 <MenuPreviewHeader items={headerItems} />
                             ) : (
-                                <MenuPreviewFooter items={footerItems} storeName={merchant?.store_name || 'Store'} />
+                                <MenuPreviewFooter items={footerItems} storeName={merchant?.store_name || 'Store'} tagline={merchant?.footer_tagline || 'Redefining modern commerce.'} />
                             )}
                         </div>
                     </div>
@@ -537,7 +537,7 @@ function MenuPreviewHeader({ items }) {
 }
 
 // Footer preview component
-function MenuPreviewFooter({ items, storeName }) {
+function MenuPreviewFooter({ items, storeName, tagline = 'Redefining modern commerce.' }) {
     const enabledItems = items.filter(item => item.enabled);
     const grouped = enabledItems.reduce((acc, item) => {
         const section = item.section || 'Other';
@@ -551,7 +551,7 @@ function MenuPreviewFooter({ items, storeName }) {
             <div className="grid grid-cols-4 gap-6">
                 <div>
                     <h4 className="font-bold text-gray-900 mb-2">{storeName}.</h4>
-                    <p className="text-sm text-gray-500">Redefining modern commerce.</p>
+                    <p className="text-sm text-gray-500">{tagline}</p>
                 </div>
                 {Object.entries(grouped).map(([section, sectionItems]) => (
                     <div key={section}>

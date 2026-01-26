@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Save,
     RotateCcw,
@@ -8,13 +8,15 @@ import {
     ExternalLink,
     Layers,
     Palette,
-    Type
+    Type,
+    LayoutGrid
 } from 'lucide-react';
 import SectionList from './SectionList';
 import SectionEditor from './SectionEditor';
 import AddSectionModal from './AddSectionModal';
 import BrandingSettings from './BrandingSettings';
 import FontSettings from './FontSettings';
+import FooterSettings from './FooterSettings';
 import { PAGE_TYPE_CONFIG } from '../../../components/storefront/sections';
 
 /**
@@ -37,16 +39,37 @@ export default function EditorSidebar({
     hasChanges,
     error,
     merchantSlug,
-    pageType = 'home'
+    pageType = 'home',
+    externalActiveTab = null,
+    onTabChange = null
 }) {
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [saveError, setSaveError] = useState(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [editMode, setEditMode] = useState('list');
-    const [activeTab, setActiveTab] = useState('sections'); // 'sections' or 'branding'
+    const [activeTab, setActiveTab] = useState('sections'); // 'sections', 'branding', 'typography', or 'footer'
+
+    // Sync with external tab state (for click-to-edit functionality)
+    useEffect(() => {
+        if (externalActiveTab && externalActiveTab !== activeTab) {
+            setActiveTab(externalActiveTab);
+            setEditMode('list');
+            onSelectSection(null);
+        }
+    }, [externalActiveTab]);
+
+    const handleTabChange = (tab) => {
+        setActiveTab(tab);
+        setEditMode('list');
+        onSelectSection(null);
+        if (onTabChange) {
+            onTabChange(tab);
+        }
+    };
 
     const selectedSection = sections.find(s => s.id === selectedSectionId);
     const pageConfig = PAGE_TYPE_CONFIG[pageType];
+
 
     const handleSave = async () => {
         setSaveError(null);
@@ -92,11 +115,7 @@ export default function EditorSidebar({
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200">
                     <button
-                        onClick={() => {
-                            setActiveTab('sections');
-                            setEditMode('list');
-                            onSelectSection(null);
-                        }}
+                        onClick={() => handleTabChange('sections')}
                         className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition ${activeTab === 'sections'
                             ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -106,11 +125,7 @@ export default function EditorSidebar({
                         <span>Sections</span>
                     </button>
                     <button
-                        onClick={() => {
-                            setActiveTab('branding');
-                            setEditMode('list');
-                            onSelectSection(null);
-                        }}
+                        onClick={() => handleTabChange('branding')}
                         className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition ${activeTab === 'branding'
                             ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -120,11 +135,7 @@ export default function EditorSidebar({
                         <span>Branding</span>
                     </button>
                     <button
-                        onClick={() => {
-                            setActiveTab('typography');
-                            setEditMode('list');
-                            onSelectSection(null);
-                        }}
+                        onClick={() => handleTabChange('typography')}
                         className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition ${activeTab === 'typography'
                             ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -132,6 +143,16 @@ export default function EditorSidebar({
                     >
                         <Type size={16} />
                         <span>Fonts</span>
+                    </button>
+                    <button
+                        onClick={() => handleTabChange('footer')}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition ${activeTab === 'footer'
+                            ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                            }`}
+                    >
+                        <LayoutGrid size={16} />
+                        <span>Footer</span>
                     </button>
                 </div>
 
@@ -189,6 +210,17 @@ export default function EditorSidebar({
                         </p>
                     </div>
                 )}
+
+                {activeTab === 'footer' && (
+                    <div className="px-4 py-4">
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-lg font-bold text-gray-900">Footer Settings</h2>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-1">
+                            Customize your footer tagline and menu links
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Scrollable Content */}
@@ -216,8 +248,10 @@ export default function EditorSidebar({
                     </div>
                 ) : activeTab === 'branding' ? (
                     <BrandingSettings />
-                ) : (
+                ) : activeTab === 'typography' ? (
                     <FontSettings />
+                ) : (
+                    <FooterSettings />
                 )}
             </div>
 
