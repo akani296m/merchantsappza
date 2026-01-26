@@ -14,15 +14,15 @@ import {
 import { useAdminMerchant } from '../../context/adminMerchantContext';
 import { supabase } from '../../lib/supabase';
 
-// Polar Product IDs for each plan
-// Replace these with your actual Polar product IDs from your Polar dashboard
+// Polar Product Price IDs for each plan
+// Replace these with your actual Polar product PRICE IDs from your Polar dashboard
 const POLAR_PRODUCTS = {
-    launch: import.meta.env.VITE_POLAR_LAUNCH_PRODUCT_ID || 'YOUR_LAUNCH_PRODUCT_ID',
+    launch: import.meta.env.VITE_POLAR_LAUNCH_PRODUCT_ID || '0bffe3d5-5082-4144-b409-7cad6bd3cf84',
     growth: import.meta.env.VITE_POLAR_GROWTH_PRODUCT_ID || 'YOUR_GROWTH_PRODUCT_ID',
 };
 
 // Fly.io API URL for Polar endpoints
-const POLAR_API_URL = import.meta.env.VITE_POLAR_API_URL || 'https://soldt-polar-api.fly.dev';
+const POLAR_API_URL = import.meta.env.VITE_POLAR_API_URL || 'https://akani.fly.dev';
 
 export default function Billing() {
     const { merchant, refetch } = useAdminMerchant();
@@ -50,7 +50,7 @@ export default function Billing() {
         try {
             // Build checkout URL with merchant info
             const params = new URLSearchParams({
-                products: productId,
+                productPriceId: productId,  // ✅ Changed from 'products' to 'productPriceId'
                 customerExternalId: merchant.id.toString(),
                 customerEmail: merchant.email || '',
                 customerName: merchant.name || '',
