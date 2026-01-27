@@ -4,6 +4,7 @@ import { Sparkles, Loader2, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/authContext';
 import { useAdminMerchant } from '../context/adminMerchantContext';
+import posthog from 'posthog-js';
 
 export default function OnboardingCard() {
   const navigate = useNavigate();
@@ -192,6 +193,15 @@ export default function OnboardingCard() {
       }
 
       console.log('[Onboarding] Merchant-user relationship created');
+
+      // Track store creation event in PostHog
+      posthog.capture('Store Created', {
+        store_id: merchant.id,
+        store_name: merchant.name,
+        store_slug: merchant.slug,
+        seller_experience: formData.experience,
+        product_status: formData.productStatus,
+      });
 
       // Refetch the merchant context to update hasMerchant status
       console.log('[Onboarding] Refreshing merchant context...');

@@ -13,7 +13,8 @@ import { useCollections } from '../../../context/collectionContext';
 export default function SectionEditor({
     section,
     onUpdateSetting,
-    onBack
+    onBack,
+    hideHeader = false
 }) {
     const { collections, loading: collectionsLoading } = useCollections();
 
@@ -159,6 +160,17 @@ export default function SectionEditor({
                         label={field.label}
                         value={value || '#000000'}
                         onChange={(color) => onUpdateSetting(section.id, field.key, color)}
+                    />
+                );
+
+            case 'color_with_opacity':
+                return (
+                    <ColorPicker
+                        key={field.key}
+                        label={field.label}
+                        value={value || 'rgba(0, 0, 0, 0.5)'}
+                        onChange={(color) => onUpdateSetting(section.id, field.key, color)}
+                        showOpacity={true}
                     />
                 );
 
@@ -316,21 +328,23 @@ export default function SectionEditor({
 
     return (
         <div className="space-y-4">
-            {/* Header with Back Button */}
-            <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
-                <button
-                    onClick={onBack}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600"
-                >
-                    <ArrowLeft size={18} />
-                </button>
-                <div>
-                    <h3 className="font-medium text-gray-900 capitalize">
-                        {section.type.replace(/_/g, ' ')}
-                    </h3>
-                    <p className="text-xs text-gray-500">Edit section settings</p>
+            {/* Header with Back Button - conditionally rendered */}
+            {!hideHeader && (
+                <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
+                    <button
+                        onClick={onBack}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
+                    <div>
+                        <h3 className="font-medium text-gray-900 capitalize">
+                            {section.type.replace(/_/g, ' ')}
+                        </h3>
+                        <p className="text-xs text-gray-500">Edit section settings</p>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Dynamic Fields */}
             <div className="space-y-4">

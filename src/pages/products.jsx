@@ -5,6 +5,7 @@ import { Share2, Eye, Save, Plus, X, ChevronDown, Layout } from 'lucide-react';
 import { uploadImage, deleteImage } from '../lib/uploadImage';
 import { useTemplates } from '../hooks/useTemplates';
 import { useAdminMerchant } from '../context/adminMerchantContext';
+import posthog from 'posthog-js';
 
 export default function ProductCreator() {
   const navigate = useNavigate();
@@ -235,6 +236,19 @@ export default function ProductCreator() {
 
       if (result.success) {
         setSaveStatus('Saved!');
+
+        // Track product creation in PostHog (only for new products, not edits)
+        if (!isEditMode) {
+          posthog.capture('Product Created', {
+            product_title: productTitle,
+            product_category: category || 'uncategorized',
+            has_images: processedImageUrls.length > 0,
+            image_count: processedImageUrls.length,
+            has_price: price > 0,
+            has_inventory: inventory !== '' && inventory !== null,
+          });
+        }
+
         // Navigate back to product listing after save
         setTimeout(() => {
           navigate('/products');

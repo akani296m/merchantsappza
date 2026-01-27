@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './authContext';
+import posthog from 'posthog-js';
 
 /**
  * AdminMerchantContext
@@ -90,6 +91,18 @@ export function AdminMerchantProvider({ children }) {
     useEffect(() => {
         fetchMerchant();
     }, [user?.id, authLoading]);
+
+    // Identify merchant with PostHog for analytics
+    useEffect(() => {
+        if (merchant?.id) {
+            posthog.identify(merchant.id, {
+                email: merchant.email,
+                store_name: merchant.name,
+                store_slug: merchant.slug,
+                city: merchant.city,
+            });
+        }
+    }, [merchant]);
 
     const value = {
         merchant,

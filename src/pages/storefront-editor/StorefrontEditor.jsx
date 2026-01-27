@@ -45,7 +45,6 @@ export default function StorefrontEditor() {
     const [loadingMerchant, setLoadingMerchant] = useState(true);
     const [merchantError, setMerchantError] = useState(null);
     const [selectedSectionId, setSelectedSectionId] = useState(null);
-    const [activeEditorTab, setActiveEditorTab] = useState('sections'); // For click-to-edit sync
 
     // Set merchant data from context
     useEffect(() => {
@@ -263,7 +262,6 @@ export default function StorefrontEditor() {
                         products={products}
                         productsLoading={productsLoading}
                         pageType={currentPageType}
-                        onFooterClick={() => setActiveEditorTab('footer')}
                     />
                 </div>
 
@@ -286,8 +284,6 @@ export default function StorefrontEditor() {
                         error={sectionsError}
                         merchantSlug={merchant.slug}
                         pageType={currentPageType}
-                        externalActiveTab={activeEditorTab}
-                        onTabChange={setActiveEditorTab}
                     />
                 </div>
             </div>

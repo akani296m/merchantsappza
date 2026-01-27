@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useMerchant } from '../context/MerchantContext';
 import { useMerchantProducts } from '../hooks/useMerchantProducts';
 import { useSections } from '../../hooks/useSections';
 import SectionRenderer from '../../components/storefront/SectionRenderer';
+import posthog from 'posthog-js';
 
 /**
  * StoreHome - Dynamic Storefront Homepage
@@ -28,6 +29,32 @@ export default function StoreHome() {
     // Base path for this merchant's storefront
     // If on custom domain, use root path. Otherwise use /s/:slug
     const basePath = isCustomDomain ? '' : `/s/${merchantSlug}`;
+
+    // Track storefront page view in PostHog
+    useEffect(() => {
+        if (merchant?.id && !merchantLoading) {
+            // Track storefront page view
+            posthog.capture('Storefront Viewed', {
+                store_id: merchant.id,
+                store_name: merchant.name,
+                store_slug: merchant.slug,
+                is_custom_domain: isCustomDomain,
+            });
+
+            // Check if this is the first time this store has been visited (Store First Launch)
+            const firstLaunchKey = `store_launched_${merchant.id}`;
+            const hasLaunched = localStorage.getItem(firstLaunchKey);
+
+            if (!hasLaunched) {
+                posthog.capture('Store First Launch', {
+                    store_id: merchant.id,
+                    store_name: merchant.name,
+                    store_slug: merchant.slug,
+                });
+                localStorage.setItem(firstLaunchKey, 'true');
+            }
+        }
+    }, [merchant?.id, merchantLoading, isCustomDomain]);
 
     // Show loading state while merchant or sections are loading
     if (merchantLoading || sectionsLoading) {
