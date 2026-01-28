@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { trackTikTokEvent } from '../storefront/lib/tiktokPixel';
 
 /**
  * @typedef {import('../types/variants').CartItem} CartItem
@@ -116,6 +117,17 @@ export function CartProvider({ children }) {
                 };
                 return [...prevItems, newItem];
             }
+        });
+
+        // Track TikTok AddToCart event
+        const trackQuantity = item.quantity || quantity;
+        trackTikTokEvent("AddToCart", {
+            content_id: String(item.product_id || item.id),
+            content_name: item.title,
+            content_type: "product",
+            quantity: trackQuantity,
+            value: item.price * trackQuantity,
+            currency: "ZAR"
         });
     };
 

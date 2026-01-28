@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useLocation, useNavigate, Link, useParams } from 'react-router-dom';
 import { CheckCircle, Package, Mail, ArrowRight, Download } from 'lucide-react';
 import { useMerchant } from '../context/MerchantContext';
+import { trackTikTokEvent } from '../lib/tiktokPixel';
 
 export default function OrderConfirmation() {
     const location = useLocation();
@@ -17,6 +18,22 @@ export default function OrderConfirmation() {
             navigate(basePath);
         }
     }, [orderId, orderData, navigate, basePath]);
+
+    // Track TikTok CompletePayment event
+    useEffect(() => {
+        if (!orderData) return;
+
+        trackTikTokEvent("CompletePayment", {
+            value: orderData.total,
+            currency: "ZAR",
+            contents: orderData.items.map(item => ({
+                content_id: String(item.product_id || item.id),
+                content_name: item.title,
+                quantity: item.quantity,
+                price: item.price
+            }))
+        });
+    }, [orderData]);
 
     if (!orderId || !orderData) return null;
 

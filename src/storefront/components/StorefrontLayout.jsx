@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { Outlet, Link, useParams } from 'react-router-dom';
 import { Search, Loader2 } from 'lucide-react';
+
 // NEW: Import social icons for the footer design
 import { FaXTwitter, FaLinkedin, FaInstagram, FaYoutube, FaPinterest } from "react-icons/fa6";
 
@@ -9,6 +10,8 @@ import { MerchantProvider, useMerchant } from '../context/MerchantContext';
 import { useSections } from '../../hooks/useSections';
 import { getSectionComponent } from '../../components/storefront/sections';
 import StorefrontNotFound from './StorefrontNotFound';
+import { loadMetaPixel } from '../lib/metaPixel';
+import { loadTikTokPixel } from '../lib/tiktokPixel';
 
 // Default menu items (used as fallback when no config is saved)
 const DEFAULT_HEADER_ITEMS = [
@@ -32,8 +35,27 @@ function StorefrontLayoutInner() {
     const { getTotalItems } = useCart();
     const { merchant, merchantSlug, loading, notFound, isCustomDomain } = useMerchant();
     const cartCount = getTotalItems();
-
+    useEffect(() => {
+        console.log("MERCHANT PIXELS:", merchant?.pixels);
+    }, [merchant]);
     const { sections, loading: sectionsLoading } = useSections(merchant?.id);
+
+    // Load marketing pixels if available and active
+    useEffect(() => {
+        if (!merchant?.pixels) return;
+
+        // Load Meta Pixel
+        const metaPixel = merchant.pixels.find(p => p.platform === "meta" && p.is_active);
+        if (metaPixel?.pixel_id) {
+            loadMetaPixel(metaPixel.pixel_id);
+        }
+
+        // Load TikTok Pixel
+        const tiktokPixel = merchant.pixels.find(p => p.platform === "tiktok" && p.is_active);
+        if (tiktokPixel?.pixel_id) {
+            loadTikTokPixel(tiktokPixel.pixel_id);
+        }
+    }, [merchant]);
 
     const { headerItems, footerSections } = useMemo(() => {
         let headerConfig = DEFAULT_HEADER_ITEMS;
@@ -175,11 +197,11 @@ function StorefrontLayoutInner() {
             <main className="flex-1">
                 <Outlet />
             </main>
-{/* --- NEW DARK FOOTER (FIXED LAYOUT) --- */}
-<footer className="bg-black text-white pt-16 pb-8 px-6 md:px-12 lg:px-20 font-sans">
+            {/* --- NEW DARK FOOTER (FIXED LAYOUT) --- */}
+            <footer className="bg-black text-white pt-16 pb-8 px-6 md:px-12 lg:px-20 font-sans">
                 {/* TOP GRID SECTION - Using 12 columns for better spacing control */}
                 <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 mb-20">
-                    
+
                     {/* Column 1: Store Branding (Increased width to col-span-4 to prevent overlap) */}
                     <div className="col-span-12 md:col-span-5 lg:col-span-4">
                         <div className="flex flex-col items-start gap-4 mb-6">
@@ -229,7 +251,7 @@ function StorefrontLayoutInner() {
 
                 {/* BOTTOM SECTION */}
                 <div className="max-w-7xl mx-auto flex flex-col-reverse md:flex-row justify-between items-start md:items-end gap-10 border-t border-gray-800 pt-8">
-                    
+
                     {/* Left: Legal & Copyright */}
                     <div className="flex flex-col gap-2 text-sm text-gray-400">
                         <div className="flex gap-6">
@@ -242,9 +264,9 @@ function StorefrontLayoutInner() {
                     {/* Right: Newsletter */}
                     <div className="w-full md:w-auto">
                         <form className="flex w-full md:w-[400px] gap-2" onSubmit={(e) => e.preventDefault()}>
-                            <input 
-                                type="email" 
-                                placeholder="Email" 
+                            <input
+                                type="email"
+                                placeholder="Email"
                                 className="flex-1 bg-transparent border border-gray-700 rounded px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-white transition"
                             />
                             <button className="bg-white text-black font-bold px-8 py-3 rounded hover:bg-gray-200 transition">
@@ -257,6 +279,7 @@ function StorefrontLayoutInner() {
         </div>
     );
 }
+
 
 export default function StorefrontLayout() {
     return (

@@ -13,13 +13,15 @@ export async function getMerchantBySlug(slug) {
     try {
         const { data, error } = await supabase
             .from('merchants')
-            .select('*')
+            .select(`
+                *,
+                pixels:merchant_pixels (*)
+            `)
             .eq('slug', slug)
             .single();
 
         if (error) {
             if (error.code === 'PGRST116') {
-                // No rows returned - merchant not found
                 return { merchant: null, error: 'Merchant not found' };
             }
             throw error;
