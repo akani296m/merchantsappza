@@ -5,7 +5,8 @@ import {
     Tablet,
     ExternalLink,
     Package,
-    Search
+    Search,
+    Share2
 } from 'lucide-react';
 import SectionRenderer from '../../../components/storefront/SectionRenderer';
 import { PAGE_TYPES, PAGE_TYPE_CONFIG, getSectionComponent } from '../../../components/storefront/sections';
@@ -23,7 +24,8 @@ export default function LivePreview({
     products = [],
     productsLoading = false,
     pageType = PAGE_TYPES.HOME,
-    onFooterClick = null
+    onFooterClick = null,
+    previewProduct = null
 }) {
     const [device, setDevice] = useState('desktop');
 
@@ -97,46 +99,143 @@ export default function LivePreview({
                 );
 
             case PAGE_TYPES.PRODUCT:
+                // Helper to extract actual URL from nested objects
+                const getImageUrl = (imageItem) => {
+                    if (!imageItem) return null;
+                    if (typeof imageItem === 'string') return imageItem;
+                    if (imageItem.url) return getImageUrl(imageItem.url);
+                    return null;
+                };
+
+                // Extract and normalize product images
+                const productImages = previewProduct?.images && Array.isArray(previewProduct.images) && previewProduct.images.length > 0
+                    ? previewProduct.images.map(img => getImageUrl(img)).filter(Boolean)
+                    : [];
+                const hasImages = productImages.length > 0;
+                const inStock = previewProduct?.inventory && previewProduct.inventory > 0;
+
                 return (
                     <div className="bg-white min-h-[400px]">
-                        {/* Mock product detail layout */}
+                        {/* Product detail layout with real data */}
                         <div className="max-w-7xl mx-auto px-6 py-8">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                {/* Product image */}
-                                <div className="aspect-[4/5] bg-gray-100 rounded-lg flex items-center justify-center">
-                                    <Package className="text-gray-300" size={64} />
+                            {!previewProduct ? (
+                                // No product available state
+                                <div className="text-center py-12">
+                                    <Package className="mx-auto text-gray-300 mb-4" size={64} />
+                                    <h3 className="text-lg font-semibold text-gray-700 mb-2">No Products Yet</h3>
+                                    <p className="text-sm text-gray-500">
+                                        Add products to your store to preview the product page layout.
+                                    </p>
                                 </div>
+                            ) : (
+                                <div className={`grid gap-8 ${device === 'mobile' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
+                                    {/* Product image */}
+                                    <div className="space-y-4">
+                                        <div className="aspect-[4/5] bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                                            {hasImages ? (
+                                                <img
+                                                    src={productImages[0]}
+                                                    alt={previewProduct.title}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100">
+                                                    <Package className="text-gray-300 mb-2" size={64} />
+                                                    <span className="text-gray-400 text-sm">No image</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {/* Thumbnails */}
+                                        {hasImages && productImages.length > 1 && (
+                                            <div className="grid grid-cols-4 gap-2">
+                                                {productImages.slice(0, 4).map((img, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        className={`aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 ${idx === 0 ? 'border-black' : 'border-transparent'}`}
+                                                    >
+                                                        <img src={img} alt="" className="w-full h-full object-cover" />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
 
-                                {/* Product info */}
-                                <div className="space-y-6">
-                                    <div className="h-3 bg-gray-200 rounded w-24"></div>
-                                    <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-8 bg-gray-200 rounded w-24"></div>
-                                        <div className="h-6 bg-green-100 rounded-full w-20"></div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="h-4 bg-gray-100 rounded w-full"></div>
-                                        <div className="h-4 bg-gray-100 rounded w-5/6"></div>
-                                        <div className="h-4 bg-gray-100 rounded w-4/6"></div>
-                                    </div>
-                                    <div className="flex gap-3">
-                                        <div className="flex-1 h-12 bg-gray-900 rounded-lg"></div>
-                                        <div className="w-12 h-12 bg-gray-100 rounded-lg"></div>
-                                    </div>
+                                    {/* Product info */}
+                                    <div className="space-y-6">
+                                        {/* Category */}
+                                        {previewProduct.category && (
+                                            <span className="text-sm text-gray-500 uppercase tracking-wider">
+                                                {previewProduct.category}
+                                            </span>
+                                        )}
 
-                                    {/* Product Trust Section placeholder - will be replaced by actual section */}
-                                    <SectionRenderer
-                                        sections={otherSections}
-                                        basePath={basePath}
-                                        products={products}
-                                        productsLoading={productsLoading}
-                                        isEditing={true}
-                                        selectedSectionId={selectedSectionId}
-                                        onSectionClick={onSelectSection}
-                                    />
+                                        {/* Title */}
+                                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                                            {previewProduct.title}
+                                        </h1>
+
+                                        {/* Price & Stock */}
+                                        <div className="flex items-center gap-4 pb-6 border-b">
+                                            <span className="text-2xl font-bold">
+                                                R {Number(previewProduct.price || 0).toLocaleString('en-ZA', {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2
+                                                })}
+                                            </span>
+                                            <span className={`px-3 py-1 text-xs font-medium rounded-full ${inStock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                {inStock ? 'In Stock' : 'Out of Stock'}
+                                            </span>
+                                        </div>
+
+                                        {/* Description */}
+                                        {previewProduct.description && (
+                                            <div>
+                                                <h3 className="font-bold text-sm uppercase mb-2">Description</h3>
+                                                <p className="text-gray-600 text-sm leading-relaxed line-clamp-4">
+                                                    {previewProduct.description}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* Tags */}
+                                        {previewProduct.tags && Array.isArray(previewProduct.tags) && previewProduct.tags.length > 0 && (
+                                            <div className="flex flex-wrap gap-2">
+                                                {previewProduct.tags.slice(0, 4).map((tag, idx) => (
+                                                    <span
+                                                        key={idx}
+                                                        className="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
+                                                    >
+                                                        #{tag}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Mock Add to Cart Button */}
+                                        <div className="flex gap-3">
+                                            <div className={`flex-1 h-12 ${inStock ? 'bg-gray-900' : 'bg-gray-300'} rounded-lg flex items-center justify-center`}>
+                                                <span className="text-white font-medium text-sm">
+                                                    {inStock ? 'Add to Cart' : 'Out of Stock'}
+                                                </span>
+                                            </div>
+                                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                                                <Share2 size={18} className="text-gray-500" />
+                                            </div>
+                                        </div>
+
+                                        {/* Product sections placeholder - will be replaced by actual section */}
+                                        <SectionRenderer
+                                            sections={otherSections}
+                                            basePath={basePath}
+                                            products={products}
+                                            productsLoading={productsLoading}
+                                            isEditing={true}
+                                            selectedSectionId={selectedSectionId}
+                                            onSectionClick={onSelectSection}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 );

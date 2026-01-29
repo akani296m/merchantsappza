@@ -3,64 +3,30 @@ import { ChevronRight, CheckCircle, AlertCircle, Eye, EyeOff, Building, DollarSi
 import { useAdminMerchant } from '../../context/adminMerchantContext';
 import { supabase } from '../../lib/supabase';
 
-// Payment Gateway Icons as SVG components
-const PaystackIcon = () => (
-    <svg viewBox="0 0 24 24" className="w-5 h-5">
-        <rect x="2" y="4" width="4" height="16" fill="#00C3F7" rx="1" />
-        <rect x="8" y="8" width="4" height="12" fill="#00C3F7" rx="1" />
-        <rect x="14" y="2" width="4" height="18" fill="#00C3F7" rx="1" />
-    </svg>
-);
-
-const PayfastIcon = () => (
-    <svg viewBox="0 0 24 24" className="w-5 h-5">
-        <text x="2" y="18" fontSize="14" fontWeight="bold" fill="#1A1A2E" fontFamily="Arial">Pf</text>
-    </svg>
-);
-
-const YocoIcon = () => (
-    <svg viewBox="0 0 24 24" className="w-5 h-5">
-        <path d="M4 12c0-4.4 3.6-8 8-8s8 3.6 8 8-3.6 8-8 8" stroke="#0066FF" strokeWidth="3" fill="none" strokeLinecap="round" />
-        <path d="M20 12c0 4.4-3.6 8-8 8s-8-3.6-8-8" stroke="#0066FF" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.5" />
-    </svg>
-);
-
-const PeachPaymentsIcon = () => (
-    <svg viewBox="0 0 24 24" className="w-5 h-5">
-        <path d="M4 6l8-2 8 2v12l-8 2-8-2V6z" fill="#1A1A2E" />
-        <path d="M6 8l6-1.5 6 1.5v8l-6 1.5-6-1.5V8z" fill="#00D4AA" />
-        <path d="M8 10l4-1 4 1v4l-4 1-4-1v-4z" fill="#FF6B9D" />
-    </svg>
-);
-
-const OzowIcon = () => (
-    <svg viewBox="0 0 24 24" className="w-5 h-5">
-        <path d="M4 4l16 16M20 4L4 20" stroke="#1A1A2E" strokeWidth="4" strokeLinecap="round" />
-    </svg>
-);
-
-const WhopIcon = () => (
-    <svg viewBox="0 0 24 24" className="w-5 h-5">
-        <circle cx="12" cy="12" r="10" fill="#FF6B00" />
-        <path d="M7 12L10 15L17 8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    </svg>
-);
-
-const ManualEFTIcon = () => (
-    <svg viewBox="0 0 24 24" className="w-5 h-5">
-        <rect x="2" y="4" width="20" height="16" rx="2" fill="#1A1A2E" />
-        <rect x="4" y="8" width="8" height="2" rx="1" fill="#4ADE80" />
-        <rect x="4" y="12" width="12" height="2" rx="1" fill="#6B7280" />
-        <rect x="4" y="16" width="6" height="2" rx="1" fill="#6B7280" />
-    </svg>
-);
+// Official payment provider logos
+import YocoLogo from '../../assets/icons/yoco.svg';
+import PaystackLogo from '../../assets/icons/Paystack.svg';
+import PayfastLogo from '../../assets/icons/Payfast.svg';
+import OzowLogo from '../../assets/icons/Ozow.svg';
+import WhopLogo from '../../assets/icons/Whop.svg';
+import ManualEFTLogo from '../../assets/icons/manualeft.svg';
 
 // Gateway data configuration
 const PAYMENT_GATEWAYS = [
     {
+        id: 'yoco',
+        name: 'Yoco',
+        logo: YocoLogo,
+        description: 'Accept card payments with competitive rates',
+        keyField: 'yoco_secret_key',
+        dashboardUrl: 'https://portal.yoco.com/',
+        dashboardLabel: 'Yoco Portal → API Keys',
+        isSecretKey: true,
+    },
+    {
         id: 'paystack',
         name: 'Paystack',
-        icon: PaystackIcon,
+        logo: PaystackLogo,
         description: 'Accept payments via cards, bank transfers, and mobile money',
         keyField: 'paystack_public_key',
         dashboardUrl: 'https://dashboard.paystack.com/#/settings/developers',
@@ -68,36 +34,17 @@ const PAYMENT_GATEWAYS = [
     },
     {
         id: 'payfast',
-        name: 'Payfast',
-        icon: PayfastIcon,
+        name: 'PayFast',
+        logo: PayfastLogo,
         description: 'South African payment gateway supporting multiple payment methods',
         keyField: 'payfast_merchant_id',
         dashboardUrl: 'https://www.payfast.co.za/dashboard',
-        dashboardLabel: 'Payfast Dashboard → Settings → Integration',
-    },
-    {
-        id: 'yoco',
-        name: 'Yoco',
-        icon: YocoIcon,
-        description: 'Accept card payments with competitive rates',
-        keyField: 'yoco_secret_key',
-        dashboardUrl: 'https://portal.yoco.com/',
-        dashboardLabel: 'Yoco Portal → API Keys',
-        isSecretKey: true, // Flag to indicate this is a secret key, not public
-    },
-    {
-        id: 'peach_payments',
-        name: 'Peach Payments',
-        icon: PeachPaymentsIcon,
-        description: 'Enterprise-grade payment processing for Africa',
-        keyField: 'peach_entity_id',
-        dashboardUrl: 'https://dashboard.peachpayments.com/',
-        dashboardLabel: 'Peach Dashboard → Settings → API Configuration',
+        dashboardLabel: 'PayFast Dashboard → Settings → Integration',
     },
     {
         id: 'ozow',
         name: 'Ozow',
-        icon: OzowIcon,
+        logo: OzowLogo,
         description: 'Instant EFT payments directly from customer bank accounts',
         keyField: 'ozow_site_code',
         dashboardUrl: 'https://ozow.com/merchant',
@@ -106,20 +53,20 @@ const PAYMENT_GATEWAYS = [
     {
         id: 'whop',
         name: 'Whop',
-        icon: WhopIcon,
+        logo: WhopLogo,
         description: 'Global payments with cards, Apple Pay, Google Pay, and crypto',
         keyField: 'whop_plan_id',
         dashboardUrl: 'https://dash.whop.com/',
         dashboardLabel: 'Whop Dashboard → Products → Plans',
-        isPlanId: true, // Flag to indicate this is a plan ID, not a key
+        isPlanId: true,
     },
     {
         id: 'manual_eft',
-        name: 'Manual EFT / Bank Transfer',
-        icon: ManualEFTIcon,
+        name: 'Bank Transfer',
+        logo: ManualEFTLogo,
         description: 'Accept direct bank transfers with Proof of Payment verification',
         keyField: 'eft_enabled',
-        isManualEFT: true, // Flag to indicate this uses custom banking fields
+        isManualEFT: true,
     },
 ];
 
@@ -646,7 +593,6 @@ export default function FinanceSettings() {
                     }}
                 >
                     {PAYMENT_GATEWAYS.map((gateway, index) => {
-                        const Icon = gateway.icon;
                         const isActive = isGatewayActive(gateway.id);
                         const isExpanded = expandedGateway === gateway.id;
                         const isLast = index === PAYMENT_GATEWAYS.length - 1;
@@ -659,19 +605,22 @@ export default function FinanceSettings() {
                                     className="flex items-center justify-between px-5 py-4 cursor-pointer transition-colors hover:bg-gray-50"
                                     style={{ padding: '16px 20px' }}
                                 >
-                                    {/* Left Side: Icon + Text */}
+                                    {/* Left Side: Logo + Text */}
                                     <div className="flex items-center gap-4">
-                                        {/* Brand Icon Container */}
+                                        {/* Brand Logo Container */}
                                         <div
-                                            className="flex items-center justify-center"
+                                            className="flex items-center justify-center bg-white border border-gray-200 overflow-hidden"
                                             style={{
                                                 width: '44px',
                                                 height: '44px',
-                                                backgroundColor: '#F3F4F6',
                                                 borderRadius: '10px',
                                             }}
                                         >
-                                            <Icon />
+                                            <img
+                                                src={gateway.logo}
+                                                alt={`${gateway.name} logo`}
+                                                className="w-6 h-6 object-contain"
+                                            />
                                         </div>
 
                                         {/* Text Block */}

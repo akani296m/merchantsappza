@@ -11,13 +11,15 @@ import {
     Copy,
     ChevronRight,
     Lock,
-    Settings
+    Settings,
+    Package,
+    ChevronDown
 } from 'lucide-react';
 import SectionEditor from './SectionEditor';
 import AddSectionModal from './AddSectionModal';
 import BrandingSettings from './BrandingSettings';
 import FontSettings from './FontSettings';
-import { PAGE_TYPE_CONFIG } from '../../../components/storefront/sections';
+import { PAGE_TYPE_CONFIG, PAGE_TYPES } from '../../../components/storefront/sections';
 
 // Section type to display name mapping
 const SECTION_DISPLAY_NAMES = {
@@ -58,7 +60,11 @@ export default function EditorSidebar({
     hasChanges,
     error,
     merchantSlug,
-    pageType = 'home'
+    pageType = 'home',
+    // New props for product preview
+    products = [],
+    previewProduct = null,
+    onPreviewProductChange = null
 }) {
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [saveError, setSaveError] = useState(null);
@@ -256,62 +262,141 @@ export default function EditorSidebar({
     };
 
     // Render Page Structure View
-    const renderPageView = () => (
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-            {/* Header Sections (Locked) */}
-            {headerSections.length > 0 && (
+    const renderPageView = () => {
+        // Helper to extract actual URL from nested objects
+        const getImageUrl = (imageItem) => {
+            if (!imageItem) return null;
+            if (typeof imageItem === 'string') return imageItem;
+            if (imageItem.url) return getImageUrl(imageItem.url);
+            return null;
+        };
+
+        return (
+            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                {/* Preview Product Selector - Only shown on Product Page */}
+                {pageType === PAGE_TYPES.PRODUCT && (
+                    <div className="bg-white rounded-lg border border-gray-200 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Package size={16} className="text-gray-500" />
+                            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                Preview Product
+                            </h3>
+                        </div>
+
+                        {products.length === 0 ? (
+                            <div className="text-center py-4">
+                                <Package className="mx-auto text-gray-300 mb-2" size={32} />
+                                <p className="text-sm text-gray-500">No products available</p>
+                                <p className="text-xs text-gray-400 mt-1">Add products to preview this page</p>
+                            </div>
+                        ) : (
+                            <div className="relative">
+                                <select
+                                    value={previewProduct?.id || ''}
+                                    onChange={(e) => onPreviewProductChange && onPreviewProductChange(e.target.value || null)}
+                                    className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 pr-10 text-sm text-gray-800 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                                >
+                                    {products.map((product) => (
+                                        <option key={product.id} value={product.id}>
+                                            {product.title}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown
+                                    size={16}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                                />
+                            </div>
+                        )}
+
+                        {/* Preview product thumbnail */}
+                        {previewProduct && (
+                            <div className="flex items-center gap-3 mt-3 p-2 bg-gray-50 rounded-lg">
+                                <div className="w-10 h-10 bg-gray-200 rounded overflow-hidden flex-shrink-0">
+                                    {previewProduct.images && previewProduct.images.length > 0 ? (
+                                        <img
+                                            src={getImageUrl(previewProduct.images[0])}
+                                            alt={previewProduct.title}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <Package size={16} className="text-gray-400" />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-800 truncate">
+                                        {previewProduct.title}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        R {Number(previewProduct.price || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        <p className="text-xs text-gray-400 mt-3">
+                            This product is used only for preview. It does not affect your live store.
+                        </p>
+                    </div>
+                )}
+
+                {/* Header Sections (Locked) */}
+                {headerSections.length > 0 && (
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Header</h3>
+                            <Lock size={12} className="text-gray-400" />
+                        </div>
+                        <div className="space-y-2">
+                            {headerSections.map((section) => renderSectionRow(section, { locked: true }))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Template Sections (Editable, Draggable) */}
                 <div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Header</h3>
-                        <Lock size={12} className="text-gray-400" />
-                    </div>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Template</h3>
                     <div className="space-y-2">
-                        {headerSections.map((section) => renderSectionRow(section, { locked: true }))}
+                        {sortedTemplateSections.map((section, index) =>
+                            renderSectionRow(section, { draggable: true, index })
+                        )}
+
+                        {/* Add Section Button - Only in Template group */}
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="w-full mt-3 border border-dashed border-gray-300 py-3 rounded-lg text-sm text-gray-600 hover:border-gray-400 hover:text-gray-800 transition-colors"
+                        >
+                            + Add section
+                        </button>
                     </div>
                 </div>
-            )}
 
-            {/* Template Sections (Editable, Draggable) */}
-            <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Template</h3>
-                <div className="space-y-2">
-                    {sortedTemplateSections.map((section, index) =>
-                        renderSectionRow(section, { draggable: true, index })
-                    )}
+                {/* Footer Sections (Locked) */}
+                {footerSections.length > 0 && (
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Footer</h3>
+                            <Lock size={12} className="text-gray-400" />
+                        </div>
+                        <div className="space-y-2">
+                            {footerSections.map((section) => renderSectionRow(section, { locked: true }))}
+                        </div>
+                    </div>
+                )}
 
-                    {/* Add Section Button - Only in Template group */}
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="w-full mt-3 border border-dashed border-gray-300 py-3 rounded-lg text-sm text-gray-600 hover:border-gray-400 hover:text-gray-800 transition-colors"
-                    >
-                        + Add section
-                    </button>
-                </div>
+                {/* Theme Settings Link */}
+                <button
+                    onClick={() => setSidebarView('theme')}
+                    className="w-full mt-4 flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+                >
+                    <Settings size={16} />
+                    <span className="underline">Theme settings</span>
+                </button>
             </div>
-
-            {/* Footer Sections (Locked) */}
-            {footerSections.length > 0 && (
-                <div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Footer</h3>
-                        <Lock size={12} className="text-gray-400" />
-                    </div>
-                    <div className="space-y-2">
-                        {footerSections.map((section) => renderSectionRow(section, { locked: true }))}
-                    </div>
-                </div>
-            )}
-
-            {/* Theme Settings Link */}
-            <button
-                onClick={() => setSidebarView('theme')}
-                className="w-full mt-4 flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-            >
-                <Settings size={16} />
-                <span className="underline">Theme settings</span>
-            </button>
-        </div>
-    );
+        );
+    };
 
     // Render Section Inspector View
     const renderSectionView = () => (

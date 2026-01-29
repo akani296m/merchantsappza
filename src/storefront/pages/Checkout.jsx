@@ -7,6 +7,12 @@ import { useCart } from '../../context/cartcontext';
 import { useMerchant } from '../context/MerchantContext';
 import { supabase } from '../../lib/supabase';
 
+// Payment provider logos
+import YocoLogo from '../../assets/icons/yoco.svg';
+import PaystackLogo from '../../assets/icons/Paystack.svg';
+import PayfastLogo from '../../assets/icons/Payfast.svg';
+import OzowLogo from '../../assets/icons/Ozow.svg';
+
 // Helper function for consistent currency formatting
 const formatCurrency = (amount) => {
     return Number(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -47,36 +53,52 @@ export default function Checkout() {
 
     // Determine available payment gateways
     const availableGateways = [];
-    if (merchant?.paystack_public_key) {
-        availableGateways.push({
-            id: 'paystack',
-            name: 'Paystack',
-            description: 'Pay securely with cards, bank transfer, or mobile money',
-            icon: '💳'
-        });
-    }
     if (merchant?.yoco_secret_key) {
         availableGateways.push({
             id: 'yoco',
             name: 'Yoco',
-            description: 'Pay securely with credit or debit card',
-            icon: '💳'
+            logo: YocoLogo,
+            meta: 'Pay securely'
+        });
+    }
+    if (merchant?.paystack_public_key) {
+        availableGateways.push({
+            id: 'paystack',
+            name: 'Paystack',
+            logo: PaystackLogo,
+            meta: 'Pay securely'
+        });
+    }
+    if (merchant?.payfast_merchant_id) {
+        availableGateways.push({
+            id: 'payfast',
+            name: 'PayFast',
+            logo: PayfastLogo,
+            meta: 'Pay securely'
+        });
+    }
+    if (merchant?.ozow_site_code) {
+        availableGateways.push({
+            id: 'ozow',
+            name: 'Ozow',
+            logo: OzowLogo,
+            meta: 'Pay securely'
         });
     }
     if (merchant?.whop_plan_id) {
         availableGateways.push({
             id: 'whop',
             name: 'Whop',
-            description: 'Pay with cards, Apple Pay, Google Pay, or crypto',
-            icon: '🌐'
+            logo: null,
+            meta: 'Pay securely'
         });
     }
     if (merchant?.eft_enabled && merchant?.eft_bank_name && merchant?.eft_account_number) {
         availableGateways.push({
             id: 'manual_eft',
-            name: 'Manual EFT / Bank Transfer',
-            description: 'Pay directly via bank transfer using the provided banking details',
-            icon: '🏦'
+            name: 'Bank Transfer',
+            logo: null,
+            meta: 'Pay via EFT'
         });
     }
 
@@ -549,83 +571,61 @@ export default function Checkout() {
                                         <p className="text-yellow-800 text-sm">No payment methods available. Please contact the store owner.</p>
                                     </div>
                                 ) : (
-                                    <div className="space-y-3">
+                                    <div className="space-y-4">
                                         {availableGateways.map((gateway) => (
-                                            <label
+                                            <div
                                                 key={gateway.id}
-                                                className={`flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedPaymentMethod === gateway.id
-                                                    ? 'border-blue-500 bg-blue-50/50'
-                                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                                onClick={() => setSelectedPaymentMethod(gateway.id)}
+                                                className={`h-[68px] px-6 border rounded-xl cursor-pointer transition-colors flex items-center justify-between w-full focus-within:ring-2 focus-within:ring-gray-900/20 focus-within:ring-offset-2 focus-within:ring-offset-white ${selectedPaymentMethod === gateway.id
+                                                        ? 'border-gray-900 bg-gray-50'
+                                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                                     }`}
                                             >
+                                                {/* Hidden radio for accessibility */}
                                                 <input
                                                     type="radio"
                                                     name="paymentMethod"
                                                     value={gateway.id}
                                                     checked={selectedPaymentMethod === gateway.id}
                                                     onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                                                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                                    className="sr-only"
+                                                    aria-label={gateway.name}
                                                 />
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-lg">{gateway.icon}</span>
-                                                        <span className="font-semibold text-gray-900">{gateway.name}</span>
-                                                        {selectedPaymentMethod === gateway.id && (
-                                                            <span className="ml-auto text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
-                                                                Selected
+
+                                                {/* Left cluster: Logo + Name */}
+                                                <div className="flex items-center gap-4">
+                                                    {/* Logo container */}
+                                                    <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center overflow-hidden">
+                                                        {gateway.logo ? (
+                                                            <img
+                                                                src={gateway.logo}
+                                                                alt={`${gateway.name} logo`}
+                                                                className="w-6 h-6 object-contain"
+                                                            />
+                                                        ) : (
+                                                            <span className="text-gray-400 text-sm font-medium">
+                                                                {gateway.name.charAt(0)}
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="text-sm text-gray-600 mt-1">{gateway.description}</p>
-
-                                                    {/* Show payment method details when selected */}
-                                                    {selectedPaymentMethod === gateway.id && (
-                                                        <div className="mt-3 pt-3 border-t border-blue-200">
-                                                            <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-                                                                <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
-                                                                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                                                                    Credit & Debit Cards
-                                                                </span>
-                                                                {gateway.id !== 'whop' && (
-                                                                    <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
-                                                                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                                                                        Bank Transfer
-                                                                    </span>
-                                                                )}
-                                                                {gateway.id === 'paystack' && (
-                                                                    <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
-                                                                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                                                                        Mobile Money
-                                                                    </span>
-                                                                )}
-                                                                {gateway.id === 'whop' && (
-                                                                    <>
-                                                                        <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
-                                                                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                                                                            Apple Pay
-                                                                        </span>
-                                                                        <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
-                                                                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                                                                            Google Pay
-                                                                        </span>
-                                                                        <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
-                                                                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                                                                            Crypto
-                                                                        </span>
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    )}
+                                                    {/* Provider name */}
+                                                    <span className="text-[16px] font-semibold text-gray-900">
+                                                        {gateway.name}
+                                                    </span>
                                                 </div>
-                                            </label>
+
+                                                {/* Right meta text */}
+                                                <span className="text-sm text-gray-500 text-right">
+                                                    {gateway.meta}
+                                                </span>
+                                            </div>
                                         ))}
 
                                         {/* Security notice */}
-                                        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-                                            <Lock size={14} className="text-gray-400" />
+                                        <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2">
+                                            <Lock size={14} className="text-gray-400 flex-shrink-0" />
                                             <p className="text-xs text-gray-500">
-                                                Your payment information is encrypted and secure. We never store your card details.
+                                                Your payment is encrypted and secure.
                                             </p>
                                         </div>
                                     </div>

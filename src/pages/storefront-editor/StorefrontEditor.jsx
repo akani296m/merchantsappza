@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Loader2, Store, ArrowLeft, Home, LayoutGrid, Package, ChevronDown } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSections } from '../../hooks/useSections';
@@ -41,10 +41,31 @@ export default function StorefrontEditor() {
     // Get products for preview
     const { products, loading: productsLoading } = useProducts();
 
+    // Preview product state - track which product to use for product page preview
+    const [previewProductId, setPreviewProductId] = useState(null);
+
     const [merchant, setMerchant] = useState(null);
     const [loadingMerchant, setLoadingMerchant] = useState(true);
     const [merchantError, setMerchantError] = useState(null);
     const [selectedSectionId, setSelectedSectionId] = useState(null);
+
+    // Compute the preview product - use selected product or fallback to first created
+    const previewProduct = useMemo(() => {
+        if (!products || products.length === 0) return null;
+
+        // If a specific product is selected, use it
+        if (previewProductId) {
+            const selected = products.find(p => p.id === previewProductId);
+            if (selected) return selected;
+        }
+
+        // Fallback: use the first product ever created (oldest by created_at)
+        // Products are sorted by created_at descending in the context, so we get the last one
+        const sortedByCreated = [...products].sort((a, b) =>
+            new Date(a.created_at) - new Date(b.created_at)
+        );
+        return sortedByCreated[0] || null;
+    }, [products, previewProductId]);
 
     // Set merchant data from context
     useEffect(() => {
@@ -262,6 +283,7 @@ export default function StorefrontEditor() {
                         products={products}
                         productsLoading={productsLoading}
                         pageType={currentPageType}
+                        previewProduct={previewProduct}
                     />
                 </div>
 
@@ -284,6 +306,9 @@ export default function StorefrontEditor() {
                         error={sectionsError}
                         merchantSlug={merchant.slug}
                         pageType={currentPageType}
+                        products={products}
+                        previewProduct={previewProduct}
+                        onPreviewProductChange={setPreviewProductId}
                     />
                 </div>
             </div>
