@@ -22,8 +22,15 @@ export default function Cart() {
             }
 
             try {
-                // Get all product IDs from cart
-                const productIds = cartItems.map(item => item.id);
+                // Get all product IDs from cart (use product_id for new format, fallback to id for legacy)
+                const productIds = cartItems
+                    .map(item => item.product_id || item.id)
+                    .filter(id => id !== undefined && id !== null);
+
+                if (productIds.length === 0) {
+                    setValidating(false);
+                    return;
+                }
 
                 // Check which products still exist in the database
                 const { data: existingProducts, error } = await supabase
@@ -42,9 +49,10 @@ export default function Cart() {
 
                 // Remove any cart items that no longer exist in the database
                 for (const item of cartItems) {
-                    if (!existingIds.has(item.id)) {
-                        console.log('[Cart] Removing deleted product from cart:', item.id, item.title);
-                        removeFromCart(item.id);
+                    const productId = item.product_id || item.id;
+                    if (!existingIds.has(productId)) {
+                        console.log('[Cart] Removing deleted product from cart:', productId, item.title);
+                        removeFromCart(item.cartItemId || productId);
                     }
                 }
             } catch (err) {
@@ -104,32 +112,42 @@ export default function Cart() {
                             </button>
                         </div>
 
-                        {cartItems.map((item) => (
-                            <div key={item.id} className="bg-white rounded-lg p-6 shadow-sm">
-                                <div className="flex gap-6">
-                                    <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                        {item.image ? <img src={item.image} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Package className="text-gray-400" size={32} /></div>}
-                                    </div>
-                                    <div className="flex-1 flex flex-col justify-between">
-                                        <div>
-                                            <Link to={`${basePath}/product/${item.id}`} className="font-semibold text-lg text-gray-900 hover:text-blue-600 transition">{item.title}</Link>
-                                            <p className="text-gray-600 mt-1">R {Number(item.price).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
+                        {cartItems.map((item) => {
+                            // Support both new format (cartItemId, product_id) and legacy format (id)
+                            const itemKey = item.cartItemId || item.id;
+                            const productId = item.product_id || item.id;
+                            const stockLimit = item.stock_quantity ?? item.inventory;
+
+                            return (
+                                <div key={itemKey} className="bg-white rounded-lg p-6 shadow-sm">
+                                    <div className="flex gap-6">
+                                        <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                            {item.image ? <img src={item.image} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Package className="text-gray-400" size={32} /></div>}
                                         </div>
-                                        <div className="flex items-center justify-between mt-4">
-                                            <div className="flex items-center border border-gray-300 rounded-lg">
-                                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-2 hover:bg-gray-50 rounded-l-lg"><Minus size={16} /></button>
-                                                <span className="px-4 py-2 font-medium min-w-[3rem] text-center">{item.quantity}</span>
-                                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-2 hover:bg-gray-50 rounded-r-lg" disabled={item.inventory && item.quantity >= item.inventory}><Plus size={16} /></button>
+                                        <div className="flex-1 flex flex-col justify-between">
+                                            <div>
+                                                <Link to={`${basePath}/product/${productId}`} className="font-semibold text-lg text-gray-900 hover:text-blue-600 transition">
+                                                    {item.title}
+                                                    {item.variant_title && <span className="text-gray-500 font-normal text-sm ml-2">({item.variant_title})</span>}
+                                                </Link>
+                                                <p className="text-gray-600 mt-1">R {Number(item.price).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
                                             </div>
-                                            <div className="flex items-center gap-4">
-                                                <span className="font-bold text-lg">R {(item.price * item.quantity).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
-                                                <button onClick={() => removeFromCart(item.id)} className="text-gray-400 hover:text-red-600 p-2"><Trash2 size={20} /></button>
+                                            <div className="flex items-center justify-between mt-4">
+                                                <div className="flex items-center border border-gray-300 rounded-lg">
+                                                    <button onClick={() => updateQuantity(itemKey, item.quantity - 1)} className="p-2 hover:bg-gray-50 rounded-l-lg"><Minus size={16} /></button>
+                                                    <span className="px-4 py-2 font-medium min-w-[3rem] text-center">{item.quantity}</span>
+                                                    <button onClick={() => updateQuantity(itemKey, item.quantity + 1)} className="p-2 hover:bg-gray-50 rounded-r-lg" disabled={stockLimit && item.quantity >= stockLimit}><Plus size={16} /></button>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <span className="font-bold text-lg">R {(item.price * item.quantity).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+                                                    <button onClick={() => removeFromCart(itemKey)} className="text-gray-400 hover:text-red-600 p-2"><Trash2 size={20} /></button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     <div className="lg:col-span-1">

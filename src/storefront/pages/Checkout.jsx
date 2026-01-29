@@ -138,8 +138,10 @@ export default function Checkout() {
                     postalCode: formData.postalCode
                 },
                 items: cartItems.map(item => ({
-                    product_id: item.id,
+                    product_id: item.product_id || item.id,
+                    variant_id: item.variant_id || null,
                     title: item.title,
+                    variant_title: item.variant_title || null,
                     quantity: item.quantity,
                     price: item.price,
                     subtotal: item.price * item.quantity
@@ -176,7 +178,14 @@ export default function Checkout() {
         if (cartItems.length === 0) return { valid: false, removedItems: [] };
 
         try {
-            const productIds = cartItems.map(item => item.id);
+            const productIds = cartItems
+                .map(item => item.product_id || item.id)
+                .filter(id => id !== undefined && id !== null);
+
+            if (productIds.length === 0) {
+                return { valid: false, error: 'No valid products in cart' };
+            }
+
             const { data: existingProducts, error } = await supabase
                 .from('products')
                 .select('id')
@@ -188,7 +197,7 @@ export default function Checkout() {
             }
 
             const existingIds = new Set(existingProducts?.map(p => p.id) || []);
-            const removedItems = cartItems.filter(item => !existingIds.has(item.id));
+            const removedItems = cartItems.filter(item => !existingIds.has(item.product_id || item.id));
 
             return {
                 valid: removedItems.length === 0,
@@ -217,8 +226,10 @@ export default function Checkout() {
                     postalCode: formData.postalCode
                 },
                 items: cartItems.map(item => ({
-                    product_id: item.id,
+                    product_id: item.product_id || item.id,
+                    variant_id: item.variant_id || null,
                     title: item.title,
+                    variant_title: item.variant_title || null,
                     quantity: item.quantity,
                     price: item.price,
                     subtotal: item.price * item.quantity
@@ -304,8 +315,10 @@ export default function Checkout() {
                     postalCode: formData.postalCode
                 },
                 items: cartItems.map(item => ({
-                    product_id: item.id,
+                    product_id: item.product_id || item.id,
+                    variant_id: item.variant_id || null,
                     title: item.title,
+                    variant_title: item.variant_title || null,
                     quantity: item.quantity,
                     price: item.price,
                     subtotal: item.price * item.quantity
@@ -355,8 +368,10 @@ export default function Checkout() {
                     postalCode: formData.postalCode
                 },
                 items: cartItems.map(item => ({
-                    product_id: item.id,
+                    product_id: item.product_id || item.id,
+                    variant_id: item.variant_id || null,
                     title: item.title,
+                    variant_title: item.variant_title || null,
                     quantity: item.quantity,
                     price: item.price,
                     subtotal: item.price * item.quantity
@@ -741,18 +756,24 @@ export default function Checkout() {
                             <div className="bg-white rounded-lg p-6 shadow-sm sticky top-6">
                                 <h2 className="text-xl font-bold mb-6">Order Summary</h2>
                                 <div className="space-y-4 mb-6 max-h-64 overflow-y-auto">
-                                    {cartItems.map((item) => (
-                                        <div key={item.id} className="flex gap-3 pb-4 border-b">
-                                            <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                                {item.image ? <img src={item.image} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="text-gray-400" size={24} /></div>}
+                                    {cartItems.map((item) => {
+                                        const itemKey = item.cartItemId || item.id;
+                                        return (
+                                            <div key={itemKey} className="flex gap-3 pb-4 border-b">
+                                                <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                                    {item.image ? <img src={item.image} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="text-gray-400" size={24} /></div>}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium text-sm truncate">
+                                                        {item.title}
+                                                        {item.variant_title && <span className="text-gray-500"> ({item.variant_title})</span>}
+                                                    </p>
+                                                    <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+                                                    <p className="text-sm font-medium mt-1">R {formatCurrency(item.price * item.quantity)}</p>
+                                                </div>
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-medium text-sm truncate">{item.title}</p>
-                                                <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
-                                                <p className="text-sm font-medium mt-1">R {formatCurrency(item.price * item.quantity)}</p>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                                 <div className="space-y-3 mb-6">
                                     <div className="flex justify-between text-gray-600"><span>Subtotal</span><span>R {formatCurrency(subtotal)}</span></div>

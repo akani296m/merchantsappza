@@ -22,7 +22,7 @@ export default function StoreLayout() {
           {/* Desktop Links */}
           <div className="hidden md:flex items-center space-x-8 text-sm font-medium">
             <Link to="/store" className="hover:text-gray-500 transition">Home</Link>
-            <Link to="/store/catalog" className="hover:text-gray-500 transition">Catalog</Link>
+            <Link to="/store/prou" className="hover:text-gray-500 transition">Catalog</Link>
             <Link to="/store/about" className="hover:text-gray-500 transition">About</Link>
           </div>
 

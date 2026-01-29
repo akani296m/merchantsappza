@@ -35,9 +35,7 @@ function StorefrontLayoutInner() {
     const { getTotalItems } = useCart();
     const { merchant, merchantSlug, loading, notFound, isCustomDomain } = useMerchant();
     const cartCount = getTotalItems();
-    useEffect(() => {
-        console.log("MERCHANT PIXELS:", merchant?.pixels);
-    }, [merchant]);
+
     const { sections, loading: sectionsLoading } = useSections(merchant?.id);
 
     // Load marketing pixels if available and active
