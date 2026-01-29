@@ -66,7 +66,7 @@ export default function Checkout() {
             id: 'paystack',
             name: 'Paystack',
             logo: PaystackLogo,
-            meta: 'Pay securely'
+            meta: 'Pay with Card, Instant EFT'
         });
     }
     if (merchant?.payfast_merchant_id) {
@@ -74,7 +74,7 @@ export default function Checkout() {
             id: 'payfast',
             name: 'PayFast',
             logo: PayfastLogo,
-            meta: 'Pay securely'
+            meta: 'Pay Card Payments, Instant EFT,SnapScan'
         });
     }
     if (merchant?.ozow_site_code) {
@@ -577,8 +577,8 @@ export default function Checkout() {
                                                 key={gateway.id}
                                                 onClick={() => setSelectedPaymentMethod(gateway.id)}
                                                 className={`h-[68px] px-6 border rounded-xl cursor-pointer transition-colors flex items-center justify-between w-full focus-within:ring-2 focus-within:ring-gray-900/20 focus-within:ring-offset-2 focus-within:ring-offset-white ${selectedPaymentMethod === gateway.id
-                                                        ? 'border-gray-900 bg-gray-50'
-                                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                                    ? 'border-gray-900 bg-gray-50'
+                                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                                     }`}
                                             >
                                                 {/* Hidden radio for accessibility */}
