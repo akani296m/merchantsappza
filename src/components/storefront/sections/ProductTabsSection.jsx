@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Package, Truck, Sparkles, Shield, Info } from 'lucide-react';
 
 /**
@@ -48,10 +48,29 @@ export default function ProductTabsSection({ settings = {}, product = null }) {
         show_icons = true
     } = settings;
 
+    const normalizedTabs = useMemo(() => tabs ?? [], [tabs]);
+    const getDefaultOpenTabs = () => {
+        if (!Array.isArray(normalizedTabs) || normalizedTabs.length === 0) {
+            return [];
+        }
+
+        if (typeof default_open_index !== 'number' || Number.isNaN(default_open_index)) {
+            return [];
+        }
+
+        if (default_open_index < 0 || default_open_index >= normalizedTabs.length) {
+            return [];
+        }
+
+        return [default_open_index];
+    };
+
     // State to track which tabs are open
-    const [openTabs, setOpenTabs] = useState(
-        default_open_index >= 0 ? [default_open_index] : []
-    );
+    const [openTabs, setOpenTabs] = useState(getDefaultOpenTabs);
+
+    useEffect(() => {
+        setOpenTabs(getDefaultOpenTabs());
+    }, [default_open_index, normalizedTabs]);
 
     const toggleTab = (index) => {
         if (allow_multiple_open) {
@@ -166,7 +185,7 @@ export default function ProductTabsSection({ settings = {}, product = null }) {
         );
     };
 
-    if (!tabs || tabs.length === 0) {
+    if (normalizedTabs.length === 0) {
         return null;
     }
 
@@ -197,7 +216,7 @@ export default function ProductTabsSection({ settings = {}, product = null }) {
 
                 {/* Tabs */}
                 <div className="space-y-0">
-                    {tabs.map((tab, index) => renderTab(tab, index))}
+                    {normalizedTabs.map((tab, index) => renderTab(tab, index))}
                 </div>
             </div>
         </section>
