@@ -81,22 +81,7 @@ function isAdminDomain(hostname) {
   );
 }
 
-/**
- * ErrorButton Component
- * Test button to verify Sentry error tracking is working
- */
-function ErrorButton() {
-  return (
-    <button
-      onClick={() => {
-        throw new Error('This is your first error!');
-      }}
-      className="fixed bottom-4 right-4 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-lg transition-colors duration-200 z-50"
-    >
-      Break the world
-    </button>
-  );
-}
+
 
 /**
  * Main App Component
@@ -304,7 +289,6 @@ export default function App() {
         <Route path="*" element={<div className="min-h-screen flex items-center justify-center"><div className="text-center"><h1 className="text-4xl font-bold text-gray-900 mb-4">Page Not Found</h1><p className="text-gray-600">The page you're looking for doesn't exist.</p></div></div>} />
 
       </Routes>
-      <ErrorButton />
     </>
   );
 }
