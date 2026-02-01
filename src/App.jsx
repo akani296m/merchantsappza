@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import * as Sentry from '@sentry/react';
 
 // Admin Layouts & Components
 import AdminLayout from './components/adminlayout';
@@ -81,6 +82,23 @@ function isAdminDomain(hostname) {
 }
 
 /**
+ * ErrorButton Component
+ * Test button to verify Sentry error tracking is working
+ */
+function ErrorButton() {
+  return (
+    <button
+      onClick={() => {
+        throw new Error('This is your first error!');
+      }}
+      className="fixed bottom-4 right-4 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-lg transition-colors duration-200 z-50"
+    >
+      Break the world
+    </button>
+  );
+}
+
+/**
  * Main App Component
  * 
  * Routing Logic:
@@ -110,180 +128,183 @@ export default function App() {
 
   // ADMIN DOMAIN: Render admin routes + /s/:slug storefront routes
   return (
-    <Routes>
+    <>
+      <Routes>
 
-      {/* =========================================== */}
-      {/* PUBLIC AUTH ROUTES                         */}
-      {/* =========================================== */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
+        {/* =========================================== */}
+        {/* PUBLIC AUTH ROUTES                         */}
+        {/* =========================================== */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
 
-      {/* =========================================== */}
-      {/* ONBOARDING (Protected but no merchant req) */}
-      {/* =========================================== */}
-      <Route path="/onboarding" element={
-        <ProtectedRoute>
-          <Onboarding />
-        </ProtectedRoute>
-      } />
+        {/* =========================================== */}
+        {/* ONBOARDING (Protected but no merchant req) */}
+        {/* =========================================== */}
+        <Route path="/onboarding" element={
+          <ProtectedRoute>
+            <Onboarding />
+          </ProtectedRoute>
+        } />
 
-      {/* =========================================== */}
-      {/* GROUP 1: ADMIN DASHBOARD ROUTES (PROTECTED)*/}
-      {/* Requires authentication AND merchant        */}
-      {/* =========================================== */}
-      <Route element={
-        <ProtectedRoute>
-          <RequireMerchant>
-            <AdminLayout />
-          </RequireMerchant>
-        </ProtectedRoute>
-      }>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/orders" element={<OrdersPage />} />
-        <Route path="/orders/:id" element={<OrderDetail />} />
-        <Route path="/products" element={<ProductsPage />} />
-        <Route path="/products/create" element={<ProductCreator />} />
-        <Route path="/products/collections" element={<Collections />} />
-        <Route path="/products/collections/create" element={<CollectionEditor />} />
-        <Route path="/products/collections/edit" element={<CollectionEditor />} />
-        <Route path="/customers" element={<CustomersPage />} />
+        {/* =========================================== */}
+        {/* GROUP 1: ADMIN DASHBOARD ROUTES (PROTECTED)*/}
+        {/* Requires authentication AND merchant        */}
+        {/* =========================================== */}
+        <Route element={
+          <ProtectedRoute>
+            <RequireMerchant>
+              <AdminLayout />
+            </RequireMerchant>
+          </ProtectedRoute>
+        }>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/orders/:id" element={<OrderDetail />} />
+          <Route path="/products" element={<ProductsPage />} />
+          <Route path="/products/create" element={<ProductCreator />} />
+          <Route path="/products/collections" element={<Collections />} />
+          <Route path="/products/collections/create" element={<CollectionEditor />} />
+          <Route path="/products/collections/edit" element={<CollectionEditor />} />
+          <Route path="/customers" element={<CustomersPage />} />
 
-        {/* Marketing Routes */}
-        <Route path="/marketing/email" element={<div className="p-8"><h1 className="text-2xl font-bold mb-2">Email Marketing</h1><p className="text-gray-500">Connect with your customers via email. Feature coming soon.</p></div>} />
-        <Route path="/marketing/facebook" element={<FacebookMarketing />} />
-        <Route path="/marketing/tiktok" element={<TikTokMarketing />} />
+          {/* Marketing Routes */}
+          <Route path="/marketing/email" element={<div className="p-8"><h1 className="text-2xl font-bold mb-2">Email Marketing</h1><p className="text-gray-500">Connect with your customers via email. Feature coming soon.</p></div>} />
+          <Route path="/marketing/facebook" element={<FacebookMarketing />} />
+          <Route path="/marketing/tiktok" element={<TikTokMarketing />} />
 
-        {/* Template Manager */}
-        <Route path="/store/templates" element={<TemplateManager />} />
-        <Route path="/store/templates/:templateId/edit" element={<TemplateEditor />} />
+          {/* Template Manager */}
+          <Route path="/store/templates" element={<TemplateManager />} />
+          <Route path="/store/templates/:templateId/edit" element={<TemplateEditor />} />
 
-        {/* AI Store Builder (Internal Demo) */}
-        <Route path="/ai-builder" element={<AIStoreBuilder />} />
-      </Route>
+          {/* AI Store Builder (Internal Demo) */}
+          <Route path="/ai-builder" element={<AIStoreBuilder />} />
+        </Route>
 
-      {/* =========================================== */}
-      {/* GROUP 2: PUBLIC STOREFRONT ROUTES          */}
-      {/* Via /s/:merchantSlug/* (slug-based)        */}
-      {/* =========================================== */}
-      <Route path="/s/:merchantSlug" element={<StorefrontLayout />}>
-        {/* /s/:merchantSlug → storefront home */}
-        <Route index element={<StoreHome />} />
+        {/* =========================================== */}
+        {/* GROUP 2: PUBLIC STOREFRONT ROUTES          */}
+        {/* Via /s/:merchantSlug/* (slug-based)        */}
+        {/* =========================================== */}
+        <Route path="/s/:merchantSlug" element={<StorefrontLayout />}>
+          {/* /s/:merchantSlug → storefront home */}
+          <Route index element={<StoreHome />} />
 
-        {/* /s/:merchantSlug/products → product catalog */}
-        <Route path="products" element={<Catalog />} />
+          {/* /s/:merchantSlug/products → product catalog */}
+          <Route path="products" element={<Catalog />} />
 
-        {/* /s/:merchantSlug/product/:productId → product detail */}
-        <Route path="product/:productId" element={<ProductDetail />} />
+          {/* /s/:merchantSlug/product/:productId → product detail */}
+          <Route path="product/:productId" element={<ProductDetail />} />
 
-        {/* /s/:merchantSlug/cart */}
-        <Route path="cart" element={<Cart />} />
+          {/* /s/:merchantSlug/cart */}
+          <Route path="cart" element={<Cart />} />
 
-        {/* /s/:merchantSlug/checkout */}
-        <Route path="checkout" element={<Checkout />} />
+          {/* /s/:merchantSlug/checkout */}
+          <Route path="checkout" element={<Checkout />} />
 
-        {/* /s/:merchantSlug/order-confirmation/:orderId */}
-        <Route path="order-confirmation/:orderId" element={<OrderConfirmation />} />
+          {/* /s/:merchantSlug/order-confirmation/:orderId */}
+          <Route path="order-confirmation/:orderId" element={<OrderConfirmation />} />
 
-        {/* Yoco Payment Result Pages */}
-        <Route path="payment-success" element={<PaymentResult />} />
-        <Route path="payment-cancelled" element={<PaymentResult />} />
-        <Route path="payment-failed" element={<PaymentResult />} />
-      </Route>
+          {/* Yoco Payment Result Pages */}
+          <Route path="payment-success" element={<PaymentResult />} />
+          <Route path="payment-cancelled" element={<PaymentResult />} />
+          <Route path="payment-failed" element={<PaymentResult />} />
+        </Route>
 
-      {/* =========================================== */}
-      {/* STOREFRONT EDITOR (Protected + Merchant)   */}
-      {/* =========================================== */}
-      <Route path="/store/editor" element={
-        <ProtectedRoute>
-          <RequireMerchant>
-            <StorefrontEditor />
-          </RequireMerchant>
-        </ProtectedRoute>
-      } />
+        {/* =========================================== */}
+        {/* STOREFRONT EDITOR (Protected + Merchant)   */}
+        {/* =========================================== */}
+        <Route path="/store/editor" element={
+          <ProtectedRoute>
+            <RequireMerchant>
+              <StorefrontEditor />
+            </RequireMerchant>
+          </ProtectedRoute>
+        } />
 
-      {/* =========================================== */}
-      {/* STORE PREVIEW (Protected + Merchant)       */}
-      {/* =========================================== */}
-      <Route path="/store" element={
-        <ProtectedRoute>
-          <RequireMerchant>
-            <StorefrontLayout />
-          </RequireMerchant>
-        </ProtectedRoute>
-      }>
-        {/* Store preview routes - same as storefront but for logged-in merchant */}
-        <Route index element={<StoreHome />} />
-        <Route path="products" element={<Catalog />} />
-        <Route path="product/:productId" element={<ProductDetail />} />
-        <Route path="cart" element={<Cart />} />
-        <Route path="checkout" element={<Checkout />} />
-        <Route path="order-confirmation/:orderId" element={<OrderConfirmation />} />
+        {/* =========================================== */}
+        {/* STORE PREVIEW (Protected + Merchant)       */}
+        {/* =========================================== */}
+        <Route path="/store" element={
+          <ProtectedRoute>
+            <RequireMerchant>
+              <StorefrontLayout />
+            </RequireMerchant>
+          </ProtectedRoute>
+        }>
+          {/* Store preview routes - same as storefront but for logged-in merchant */}
+          <Route index element={<StoreHome />} />
+          <Route path="products" element={<Catalog />} />
+          <Route path="product/:productId" element={<ProductDetail />} />
+          <Route path="cart" element={<Cart />} />
+          <Route path="checkout" element={<Checkout />} />
+          <Route path="order-confirmation/:orderId" element={<OrderConfirmation />} />
 
-        {/* Yoco Payment Result Pages */}
-        <Route path="payment-success" element={<PaymentResult />} />
-        <Route path="payment-cancelled" element={<PaymentResult />} />
-        <Route path="payment-failed" element={<PaymentResult />} />
-      </Route>
+          {/* Yoco Payment Result Pages */}
+          <Route path="payment-success" element={<PaymentResult />} />
+          <Route path="payment-cancelled" element={<PaymentResult />} />
+          <Route path="payment-failed" element={<PaymentResult />} />
+        </Route>
 
-      {/* =========================================== */}
-      {/* PAGES MANAGEMENT (Protected + Merchant)    */}
-      {/* =========================================== */}
-      <Route path="/store/pages" element={
-        <ProtectedRoute>
-          <RequireMerchant>
-            <Pages />
-          </RequireMerchant>
-        </ProtectedRoute>
-      } />
+        {/* =========================================== */}
+        {/* PAGES MANAGEMENT (Protected + Merchant)    */}
+        {/* =========================================== */}
+        <Route path="/store/pages" element={
+          <ProtectedRoute>
+            <RequireMerchant>
+              <Pages />
+            </RequireMerchant>
+          </ProtectedRoute>
+        } />
 
-      {/* =========================================== */}
-      {/* NAVIGATION SETTINGS (Protected + Merchant) */}
-      {/* =========================================== */}
-      <Route path="/store/navigation" element={
-        <ProtectedRoute>
-          <RequireMerchant>
-            <Navigation />
-          </RequireMerchant>
-        </ProtectedRoute>
-      } />
+        {/* =========================================== */}
+        {/* NAVIGATION SETTINGS (Protected + Merchant) */}
+        {/* =========================================== */}
+        <Route path="/store/navigation" element={
+          <ProtectedRoute>
+            <RequireMerchant>
+              <Navigation />
+            </RequireMerchant>
+          </ProtectedRoute>
+        } />
 
-      {/* =========================================== */}
-      {/* SETTINGS ROUTES (Protected, Custom Layout)*/}
-      {/* =========================================== */}
-      <Route path="/settings" element={
-        <ProtectedRoute>
-          <RequireMerchant>
-            <SettingsLayout />
-          </RequireMerchant>
-        </ProtectedRoute>
-      }>
-        <Route path="general" element={<GeneralSettings />} />
-        <Route path="finance" element={<FinanceSettings />} />
-        <Route path="billing" element={<BillingSettings />} />
-        <Route path="manage-store" element={<ManageStoreSettings />} />
-        <Route path="orders-notifications" element={<OrdersNotificationsSettings />} />
-        <Route path="shipping" element={<ShippingSettings />} />
-        <Route path="taxes" element={<TaxesSettings />} />
-        <Route path="danger-zone" element={<DangerZoneSettings />} />
-        {/* Default redirect to general settings */}
-        <Route index element={<GeneralSettings />} />
-      </Route>
+        {/* =========================================== */}
+        {/* SETTINGS ROUTES (Protected, Custom Layout)*/}
+        {/* =========================================== */}
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <RequireMerchant>
+              <SettingsLayout />
+            </RequireMerchant>
+          </ProtectedRoute>
+        }>
+          <Route path="general" element={<GeneralSettings />} />
+          <Route path="finance" element={<FinanceSettings />} />
+          <Route path="billing" element={<BillingSettings />} />
+          <Route path="manage-store" element={<ManageStoreSettings />} />
+          <Route path="orders-notifications" element={<OrdersNotificationsSettings />} />
+          <Route path="shipping" element={<ShippingSettings />} />
+          <Route path="taxes" element={<TaxesSettings />} />
+          <Route path="danger-zone" element={<DangerZoneSettings />} />
+          {/* Default redirect to general settings */}
+          <Route index element={<GeneralSettings />} />
+        </Route>
 
-      {/* =========================================== */}
-      {/* BILLING SUCCESS (Protected + Merchant)     */}
-      {/* Standalone route for Polar checkout success*/}
-      {/* =========================================== */}
-      <Route path="/billing/success" element={
-        <ProtectedRoute>
-          <RequireMerchant>
-            <BillingSuccess />
-          </RequireMerchant>
-        </ProtectedRoute>
-      } />
+        {/* =========================================== */}
+        {/* BILLING SUCCESS (Protected + Merchant)     */}
+        {/* Standalone route for Polar checkout success*/}
+        {/* =========================================== */}
+        <Route path="/billing/success" element={
+          <ProtectedRoute>
+            <RequireMerchant>
+              <BillingSuccess />
+            </RequireMerchant>
+          </ProtectedRoute>
+        } />
 
-      {/* 404 Catch-all */}
-      <Route path="*" element={<div className="min-h-screen flex items-center justify-center"><div className="text-center"><h1 className="text-4xl font-bold text-gray-900 mb-4">Page Not Found</h1><p className="text-gray-600">The page you're looking for doesn't exist.</p></div></div>} />
+        {/* 404 Catch-all */}
+        <Route path="*" element={<div className="min-h-screen flex items-center justify-center"><div className="text-center"><h1 className="text-4xl font-bold text-gray-900 mb-4">Page Not Found</h1><p className="text-gray-600">The page you're looking for doesn't exist.</p></div></div>} />
 
-    </Routes>
+      </Routes>
+      <ErrorButton />
+    </>
   );
 }

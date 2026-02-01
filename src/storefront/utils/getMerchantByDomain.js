@@ -14,10 +14,10 @@ export async function getMerchantByDomain(domain) {
         const { data, error } = await supabase
             .from('merchants')
             .select(`
-  *,
-  pixels:merchant_pixels (*)
-`)
-
+                *,
+                pixels:merchant_pixels (*),
+                theme:themes (*)
+            `)
             .eq('custom_domain', domain)
             .single();
 

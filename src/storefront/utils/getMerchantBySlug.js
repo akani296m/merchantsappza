@@ -15,7 +15,8 @@ export async function getMerchantBySlug(slug) {
             .from('merchants')
             .select(`
                 *,
-                pixels:merchant_pixels (*)
+                pixels:merchant_pixels (*),
+                theme:themes (*)
             `)
             .eq('slug', slug)
             .single();

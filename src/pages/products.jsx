@@ -5,6 +5,7 @@ import { Share2, Eye, Save, Plus, X, ChevronDown, Layout } from 'lucide-react';
 import { uploadImage, deleteImage } from '../lib/uploadImage';
 import { useTemplates } from '../hooks/useTemplates';
 import { useAdminMerchant } from '../context/adminMerchantContext';
+import { ShopifyVariantEditor } from '../components/admin/ShopifyVariantEditor';
 import posthog from 'posthog-js';
 
 export default function ProductCreator() {
@@ -538,6 +539,35 @@ export default function ProductCreator() {
               </p>
             )}
           </div>
+
+          {/* Product Variants Section (only for saved products) */}
+          {isEditMode && editProduct?.id && (
+            <ShopifyVariantEditor
+              productId={editProduct.id}
+              hasVariants={editProduct.has_variants || false}
+              basePrice={price}
+              baseInventory={Number(inventory) || 0}
+              onHasVariantsChange={(hasVariants) => {
+                // The component handles updating the database
+                console.log('Variants enabled:', hasVariants);
+              }}
+              onVariantsChange={() => {
+                // Refresh could be added here if needed
+                console.log('Variants updated');
+              }}
+            />
+          )}
+
+          {/* Info for new products */}
+          {!isEditMode && (
+            <div className="pt-4 border-t border-gray-200">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> Save this product first to add variants (size, color, etc.)
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

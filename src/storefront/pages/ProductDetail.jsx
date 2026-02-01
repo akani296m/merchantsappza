@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Truck, ShieldCheck, Minus, Plus, Package, Loader2, Heart, Share2 } from 'lucide-react';
 import Breadcrumb from '../components/Breadcrumb';
@@ -8,6 +8,8 @@ import { useMerchant } from '../context/MerchantContext';
 import { useProductTemplateSections } from '../../hooks/useProductTemplateSections';
 import SectionRenderer from '../../components/storefront/SectionRenderer';
 import { PAGE_TYPES, getSectionZone, SECTION_ZONES } from '../../components/storefront/sections';
+import { useProductVariants, useVariantSelection } from '../../hooks/useVariants';
+import { VariantSelector, VariantPriceDisplay, VariantStockBadge } from '../components/VariantSelector';
 
 export default function ProductDetail() {
     const { merchantSlug, productId } = useParams();
@@ -23,12 +25,46 @@ export default function ProductDetail() {
         product?.template_id
     );
 
+    // Fetch variants for this product
+    const { variants, optionTypes, loading: variantsLoading } = useProductVariants(productId);
+
+    // Variant selection state
+    const {
+        selectedOptions,
+        isSelectionComplete,
+        activeVariant,
+        effectivePrice,
+        effectiveImage,
+        isInStock,
+        stockQuantity,
+        selectOption,
+        getAvailableValuesForOption,
+        getCartItemData,
+        hasVariants
+    } = useVariantSelection(product, variants, optionTypes);
+
     const [activeImage, setActiveImage] = useState(0);
     const [quantity, setQuantity] = useState(1);
     const [isFavorite, setIsFavorite] = useState(false);
 
     // Base path for this merchant's storefront
     const basePath = isCustomDomain ? '' : `/s/${merchantSlug}`;
+
+    // Update active image when variant changes
+    useEffect(() => {
+        if (effectiveImage) {
+            // Find the image index in product images
+            const productImages = product?.images?.map(img => {
+                if (typeof img === 'string') return img;
+                return img?.url || null;
+            }).filter(Boolean) || [];
+
+            const imageIndex = productImages.indexOf(effectiveImage);
+            if (imageIndex >= 0) {
+                setActiveImage(imageIndex);
+            }
+        }
+    }, [effectiveImage, product?.images]);
 
     // Build breadcrumb items dynamically - MUST be before any early returns
     const breadcrumbItems = useMemo(() => {
@@ -62,19 +98,36 @@ export default function ProductDetail() {
     };
 
     const handleAddToCart = () => {
-        const productImages = product.images && Array.isArray(product.images) && product.images.length > 0
-            ? product.images.map(img => getImageUrl(img)).filter(Boolean)
-            : [];
+        // If product has variants, require selection
+        if (hasVariants && !isSelectionComplete) {
+            alert('Please select all options before adding to cart');
+            return;
+        }
 
-        const cartItem = {
-            id: product.id,
-            title: product.title,
-            price: product.price,
-            image: productImages[0] || null,
-            inventory: product.inventory
-        };
+        // Get cart item data from variant selection hook (handles both variant and non-variant)
+        if (hasVariants) {
+            const cartItemData = getCartItemData(quantity);
+            if (!cartItemData) {
+                alert('Unable to add to cart');
+                return;
+            }
+            addToCart(cartItemData, quantity);
+        } else {
+            // Legacy: non-variant product
+            const productImages = product.images && Array.isArray(product.images) && product.images.length > 0
+                ? product.images.map(img => getImageUrl(img)).filter(Boolean)
+                : [];
 
-        addToCart(cartItem, quantity);
+            const cartItem = {
+                id: product.id,
+                title: product.title,
+                price: product.price,
+                image: productImages[0] || null,
+                inventory: product.inventory
+            };
+
+            addToCart(cartItem, quantity);
+        }
     };
 
     const handleShare = async () => {
@@ -96,7 +149,7 @@ export default function ProductDetail() {
     };
 
     // Loading state
-    if (loading || merchantLoading || sectionsLoading) {
+    if (loading || merchantLoading || sectionsLoading || variantsLoading) {
         return (
             <div className="max-w-7xl mx-auto px-6 py-12">
                 <div className="flex items-center justify-center min-h-[500px]">
@@ -136,7 +189,15 @@ export default function ProductDetail() {
         : [];
 
     const hasImages = productImages.length > 0;
-    const inStock = product.inventory && product.inventory > 0;
+    // Use variant-aware stock check if product has variants
+    const inStock = hasVariants
+        ? (isSelectionComplete ? isInStock : true) // Allow adding if incomplete (will prompt)
+        : (product.inventory && product.inventory > 0);
+
+    // Get the effective stock quantity for max input
+    const currentStock = hasVariants
+        ? (isSelectionComplete ? stockQuantity : product.inventory)
+        : product.inventory;
 
     // Filter sections by zone
     const trustSections = sections.filter(s =>
@@ -225,15 +286,40 @@ export default function ProductDetail() {
                             {product.title}
                         </h1>
 
-                        {/* Price */}
+                        {/* Price - shows variant price when selected, or "From" when not */}
                         <div className="mb-6 pb-6 border-b">
-                            <span className="text-3xl font-bold">
-                                R {Number(product.price).toLocaleString('en-ZA', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                })}
-                            </span>
-                        </div>
+                            {hasVariants && !isSelectionComplete ? (
+                                <div>
+                                    <span className="text-sm text-gray-500 mr-2">From</span>
+                                    <span className="text-3xl font-bold">
+                                        R {Number(effectivePrice || product.price).toLocaleString('en-ZA', {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2
+                                        })}
+                                    </span>
+                                </div>
+                            ) : (
+                                <span className="text-3xl font-bold">
+                                    R {Number(effectivePrice || product.price).toLocaleString('en-ZA', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    })}
+                                </span>
+                            )}\n                        </div>
+
+                        {/* Variant Selector */}
+                        {hasVariants && optionTypes.length > 0 && (
+                            <div className="mb-8">
+                                <VariantSelector
+                                    optionTypes={optionTypes}
+                                    selectedOptions={selectedOptions}
+                                    getAvailableValuesForOption={getAvailableValuesForOption}
+                                    onSelectOption={selectOption}
+                                    isSelectionComplete={isSelectionComplete}
+                                    activeVariant={activeVariant}
+                                />
+                            </div>
+                        )}
 
                         {/* Description */}
                         {product.description && (
@@ -271,15 +357,15 @@ export default function ProductDetail() {
                                     <button
                                         onClick={() => setQuantity(q => Math.max(1, q - 1))}
                                         className="p-3 text-gray-500 hover:text-black hover:bg-gray-50 transition rounded-l-lg"
-                                        disabled={!inStock}
+                                        disabled={!inStock || (hasVariants && !isSelectionComplete)}
                                     >
                                         <Minus size={18} />
                                     </button>
                                     <span className="font-medium text-lg">{quantity}</span>
                                     <button
-                                        onClick={() => setQuantity(q => product.inventory ? Math.min(product.inventory, q + 1) : q + 1)}
+                                        onClick={() => setQuantity(q => currentStock ? Math.min(currentStock, q + 1) : q + 1)}
                                         className="p-3 text-gray-500 hover:text-black hover:bg-gray-50 transition rounded-r-lg"
-                                        disabled={!inStock || (product.inventory && quantity >= product.inventory)}
+                                        disabled={!inStock || (currentStock && quantity >= currentStock) || (hasVariants && !isSelectionComplete)}
                                     >
                                         <Plus size={18} />
                                     </button>
@@ -290,10 +376,13 @@ export default function ProductDetail() {
                             <div className="flex gap-3">
                                 <button
                                     onClick={handleAddToCart}
-                                    disabled={!inStock}
+                                    disabled={hasVariants ? (!isSelectionComplete || !isInStock) : !inStock}
                                     className="flex-1 bg-black text-white font-bold rounded-lg hover:bg-gray-800 transition py-4 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:text-gray-500"
                                 >
-                                    {inStock ? 'Add to Cart' : 'Out of Stock'}
+                                    {hasVariants && !isSelectionComplete
+                                        ? 'Select Options'
+                                        : (inStock ? 'Add to Cart' : 'Out of Stock')
+                                    }
                                 </button>
                                 <button
                                     onClick={handleShare}

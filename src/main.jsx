@@ -9,6 +9,15 @@ import { ProductProvider } from './context/productcontext.jsx';
 import { CollectionProvider } from './context/collectionContext.jsx';
 import { CartProvider } from './context/cartcontext.jsx';
 import { PostHogProvider } from 'posthog-js/react';
+import * as Sentry from '@sentry/react'
+
+
+Sentry.init({
+  dsn: 'https://00e68e309c8142206b60666f7beb7864@o4510799705669632.ingest.de.sentry.io/4510799726379088',
+  // Setting this option to true will send default PII data to Sentry.
+  // For example, automatic IP address collection on events
+  sendDefaultPii: true,
+});
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

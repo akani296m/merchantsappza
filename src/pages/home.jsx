@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabase';
 import { useAdminMerchant } from '../context/adminMerchantContext';
 import { useProducts } from '../context/productcontext';
 
+
 export default function Home() {
   const { merchantId, merchant, loading: merchantLoading } = useAdminMerchant();
   const { products, loading: productsLoading } = useProducts();

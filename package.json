@@ -12,6 +12,7 @@
   "dependencies": {
     "@paystack/inline-js": "^2.22.7",
     "@polar-sh/supabase": "^0.4.2",
+    "@sentry/react": "^10.38.0",
     "@supabase/supabase-js": "^2.89.0",
     "@whop/checkout": "^0.0.50",
     "hugeicons-react": "^0.4.0",

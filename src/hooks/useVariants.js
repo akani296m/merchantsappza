@@ -36,18 +36,26 @@ export function useVariantSelection(product, variants = [], optionTypes = []) {
         }
     }, [optionTypes]);
 
-    // Get all unique values for each option type from variants
+    // Get all unique values for each option type
+    // Prefers option_values from optionTypes (Shopify-style) when available,
+    // falls back to extracting from variants for backward compatibility
     const availableOptionValues = useMemo(() => {
         const values = {};
 
         optionTypes.forEach(optType => {
-            const uniqueValues = new Set();
-            variants.forEach(variant => {
-                if (variant.option_values && variant.option_values[optType.name]) {
-                    uniqueValues.add(variant.option_values[optType.name]);
-                }
-            });
-            values[optType.name] = Array.from(uniqueValues);
+            // First, try to use option_values from the optionType itself (Shopify-style)
+            if (optType.option_values && Array.isArray(optType.option_values) && optType.option_values.length > 0) {
+                values[optType.name] = optType.option_values;
+            } else {
+                // Fallback: extract unique values from variants
+                const uniqueValues = new Set();
+                variants.forEach(variant => {
+                    if (variant.option_values && variant.option_values[optType.name]) {
+                        uniqueValues.add(variant.option_values[optType.name]);
+                    }
+                });
+                values[optType.name] = Array.from(uniqueValues);
+            }
         });
 
         return values;
@@ -241,6 +249,7 @@ export function useProductVariants(productId) {
     const [optionTypes, setOptionTypes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [refetchTrigger, setRefetchTrigger] = useState(0);
 
     useEffect(() => {
         if (!productId) {
@@ -284,7 +293,7 @@ export function useProductVariants(productId) {
         };
 
         fetchVariants();
-    }, [productId]);
+    }, [productId, refetchTrigger]);
 
     return {
         variants,
@@ -292,13 +301,11 @@ export function useProductVariants(productId) {
         loading,
         error,
         refetch: () => {
-            if (productId) {
-                setLoading(true);
-                // Trigger re-fetch by updating state
-            }
+            setRefetchTrigger(prev => prev + 1);
         }
     };
 }
+
 
 
 // =============================================================================

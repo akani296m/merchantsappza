@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { ShoppingBag, ArrowLeft, Lock, AlertCircle } from 'lucide-react';
 import PaystackPop from '@paystack/inline-js';
@@ -51,66 +51,83 @@ export default function Checkout() {
         orderNotes: ''
     });
 
-    // Determine available payment gateways
-    const availableGateways = [];
-    if (merchant?.yoco_secret_key) {
-        availableGateways.push({
-            id: 'yoco',
-            name: 'Yoco',
-            logo: YocoLogo,
-            meta: 'Pay securely'
-        });
-    }
-    if (merchant?.paystack_public_key) {
-        availableGateways.push({
-            id: 'paystack',
-            name: 'Paystack',
-            logo: PaystackLogo,
-            meta: 'Pay with Card, Instant EFT'
-        });
-    }
-    if (merchant?.payfast_merchant_id) {
-        availableGateways.push({
-            id: 'payfast',
-            name: 'PayFast',
-            logo: PayfastLogo,
-            meta: 'Pay Card Payments, Instant EFT,SnapScan'
-        });
-    }
-    if (merchant?.ozow_site_code) {
-        availableGateways.push({
-            id: 'ozow',
-            name: 'Ozow',
-            logo: OzowLogo,
-            meta: 'Pay securely'
-        });
-    }
-    if (merchant?.whop_plan_id) {
-        availableGateways.push({
-            id: 'whop',
-            name: 'Whop',
-            logo: null,
-            meta: 'Pay securely'
-        });
-    }
-    if (merchant?.eft_enabled && merchant?.eft_bank_name && merchant?.eft_account_number) {
-        availableGateways.push({
-            id: 'manual_eft',
-            name: 'Bank Transfer',
-            logo: null,
-            meta: 'Pay via EFT'
-        });
-    }
+    // Determine available payment gateways - memoized to prevent recreation on every render
+    const availableGateways = useMemo(() => {
+        const gateways = [];
+        if (merchant?.yoco_secret_key) {
+            gateways.push({
+                id: 'yoco',
+                name: 'Yoco',
+                logo: YocoLogo,
+                meta: 'Pay securely'
+            });
+        }
+        if (merchant?.paystack_public_key) {
+            gateways.push({
+                id: 'paystack',
+                name: 'Paystack',
+                logo: PaystackLogo,
+                meta: 'Pay with Card, Instant EFT'
+            });
+        }
+        if (merchant?.payfast_merchant_id) {
+            gateways.push({
+                id: 'payfast',
+                name: 'PayFast',
+                logo: PayfastLogo,
+                meta: 'Pay Card Payments, Instant EFT,SnapScan'
+            });
+        }
+        if (merchant?.ozow_site_code) {
+            gateways.push({
+                id: 'ozow',
+                name: 'Ozow',
+                logo: OzowLogo,
+                meta: 'Pay securely'
+            });
+        }
+        if (merchant?.whop_plan_id) {
+            gateways.push({
+                id: 'whop',
+                name: 'Whop',
+                logo: null,
+                meta: 'Pay securely'
+            });
+        }
+        if (merchant?.eft_enabled && merchant?.eft_bank_name && merchant?.eft_account_number) {
+            gateways.push({
+                id: 'manual_eft',
+                name: 'Bank Transfer',
+                logo: null,
+                meta: 'Pay via EFT'
+            });
+        }
+        return gateways;
+    }, [
+        merchant?.yoco_secret_key,
+        merchant?.paystack_public_key,
+        merchant?.payfast_merchant_id,
+        merchant?.ozow_site_code,
+        merchant?.whop_plan_id,
+        merchant?.eft_enabled,
+        merchant?.eft_bank_name,
+        merchant?.eft_account_number
+    ]);
 
     // Default to first available gateway
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
+
+    // Generate payment reference once and keep it stable
+    const [paymentReference] = useState(() =>
+        Math.random().toString(36).substring(2, 7).toUpperCase()
+    );
 
     // Set default payment method when gateways are loaded
     useEffect(() => {
         if (availableGateways.length > 0 && !selectedPaymentMethod) {
             setSelectedPaymentMethod(availableGateways[0].id);
         }
-    }, [merchant?.paystack_public_key, merchant?.yoco_secret_key, merchant?.whop_plan_id, merchant?.eft_enabled]);
+    }, [availableGateways, selectedPaymentMethod]);
 
     useEffect(() => {
         if (cartItems.length === 0 && !isCompletingOrder.current) {
@@ -706,7 +723,7 @@ export default function Checkout() {
                                             <p className="text-sm text-gray-500 mb-1">Use this reference for your payment:</p>
                                             <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 flex items-center justify-between">
                                                 <span className="font-mono font-bold text-blue-700">
-                                                    {formData.firstName ? `${formData.firstName.toUpperCase().slice(0, 3)}${formData.lastName ? formData.lastName.toUpperCase().slice(0, 3) : ''}` : 'YOUR NAME'}-{Math.random().toString(36).substring(2, 7).toUpperCase()}
+                                                    {formData.firstName ? `${formData.firstName.toUpperCase().slice(0, 3)}${formData.lastName ? formData.lastName.toUpperCase().slice(0, 3) : ''}` : 'YOUR NAME'}-{paymentReference}
                                                 </span>
                                                 <span className="text-xs text-blue-600">Copy this!</span>
                                             </div>
@@ -757,7 +774,7 @@ export default function Checkout() {
                                 <h2 className="text-xl font-bold mb-6">Order Summary</h2>
                                 <div className="space-y-4 mb-6 max-h-64 overflow-y-auto">
                                     {cartItems.map((item) => {
-                                        const itemKey = item.cartItemId || item.id;
+                                        const itemKey = item.cartItemId || `${item.product_id || item.id}-${item.variant_id || 'default'}`;
                                         return (
                                             <div key={itemKey} className="flex gap-3 pb-4 border-b">
                                                 <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">

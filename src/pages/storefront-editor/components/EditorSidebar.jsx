@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Loader2,
     CheckCircle,
@@ -17,8 +17,7 @@ import {
 } from 'lucide-react';
 import SectionEditor from './SectionEditor';
 import AddSectionModal from './AddSectionModal';
-import BrandingSettings from './BrandingSettings';
-import FontSettings from './FontSettings';
+import ThemeSettings from './ThemeSettings';
 import { PAGE_TYPE_CONFIG, PAGE_TYPES } from '../../../components/storefront/sections';
 
 // Section type to display name mapping
@@ -59,6 +58,7 @@ export default function EditorSidebar({
     saving,
     hasChanges,
     error,
+    // eslint-disable-next-line no-unused-vars
     merchantSlug,
     pageType = 'home',
     // New props for product preview
@@ -71,16 +71,19 @@ export default function EditorSidebar({
     const [showAddModal, setShowAddModal] = useState(false);
 
     // Sidebar view state: 'page' | 'section' | 'theme'
-    const [sidebarView, setSidebarView] = useState('page');
+    // User can switch to theme view manually
+    const [explicitView, setExplicitView] = useState(null);
 
-    // Auto-switch to section view when a section is selected
-    useEffect(() => {
-        if (selectedSectionId) {
-            setSidebarView('section');
-        }
-    }, [selectedSectionId]);
+    // Compute effective view: explicit user choice overrides, otherwise derive from selection
+    const sidebarView = explicitView || (selectedSectionId ? 'section' : 'page');
+
+    // Wrapper to set sidebar view explicitly
+    const setSidebarView = (view) => {
+        setExplicitView(view);
+    };
 
     const selectedSection = sections.find(s => s.id === selectedSectionId);
+    // eslint-disable-next-line no-unused-vars
     const pageConfig = PAGE_TYPE_CONFIG[pageType];
 
     // Helper to determine section location
@@ -436,9 +439,9 @@ export default function EditorSidebar({
 
     // Render Theme Settings View
     const renderThemeView = () => (
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-hidden flex flex-col">
             {/* Back Button Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3">
+            <div className="shrink-0 sticky top-0 bg-white border-b border-gray-200 px-4 py-3">
                 <button
                     onClick={() => {
                         setSidebarView('page');
@@ -450,20 +453,9 @@ export default function EditorSidebar({
                 </button>
             </div>
 
-            {/* Theme Settings Header */}
-            <div className="px-4 py-4 border-b border-gray-100">
-                <h2 className="text-base font-semibold text-gray-900">Theme settings</h2>
-                <p className="text-xs text-gray-500 mt-0.5">Global styles and branding</p>
-            </div>
-
-            {/* Branding Settings */}
-            <div className="border-b border-gray-100">
-                <BrandingSettings />
-            </div>
-
-            {/* Font Settings */}
-            <div>
-                <FontSettings />
+            {/* Theme Settings Component */}
+            <div className="flex-1 overflow-hidden">
+                <ThemeSettings />
             </div>
         </div>
     );
